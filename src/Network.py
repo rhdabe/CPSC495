@@ -1,7 +1,9 @@
-from Segments.Segment import *
-from Segments.Header import *
-from Segments import IPDatagram
-from Segments import EthernetFrame
+
+#TODO reintegrate Segment stuff once GUI works.
+#from Segments.Segment import *
+#from Segments.Header import *
+#from Segments import IPDatagram
+#from Segments import EthernetFrame
 import Packet
 
 class Network:

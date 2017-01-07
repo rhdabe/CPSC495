@@ -1,6 +1,8 @@
-from Segments.EthernetFrame import EthernetFrame
-from Segments.IPDatagram import IPDatagram
-from Segments.Segment import *
+
+#TODO reintegrate segment stuff once GUI works.
+#from Segments.EthernetFrame import EthernetFrame
+#from Segments.IPDatagram import IPDatagram
+#from Segments.Segment import *
 from src.Network import Network
 
 class Node:
