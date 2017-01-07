@@ -11,9 +11,9 @@ __version__ = "1.0.1"
 from PyQt4 import QtCore, QtGui
 
 from Node import *
-from src.Connection import *
+#from src.Connection import *
 # from src.Node import *
-from src.SimulationLoop import *
+#from src.SimulationLoop import *
 from SendMessageWindow import SendMessage_Window
 from src.SimulationLoop import tick
 import sip
