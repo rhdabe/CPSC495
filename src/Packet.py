@@ -2,8 +2,7 @@
 __author__ = "Rhys Beck"
 __version__ = "1.0.0"
 
-#import SimulationLoop
-
+import Network
 class Packet:
 
     """This class is intended to wrap Ryan's Segment/Datagram/Frame for convenience in advancing the simulation."""
@@ -25,12 +24,13 @@ class Packet:
         self.payload = payload
         self.current_node = node
         self.packet_id = Packet.static_packet_id
+        self.timer=-1
         Packet.static_packet_id += 1
 
     def set_connection(self, connection):
+        self.connection = connection
         if self.connection is not None:
             self.connection.removeTraffic()
-        self.connection = connection
         self.connection.addTraffic()
         self.set_timer(connection.latency)
 
@@ -41,18 +41,31 @@ class Packet:
         self.timer -= 1
 
     def update_location(self):
-        global the_network
+        network=Network.network
+        if self.current_node.node_id != self.get_destination():
+            if self.timer == -1:
+                #This means this packet has just been created and doesn't know where to go yet.
+                self.set_connection(network.connections\
+                    [\
+                        (\
+                            network.get_node_pair_id(\
+                                self.current_node.node_id,\
+                                self.current_node.next_hop(self.get_destination()).node_id)\
+                        )\
+                    ])
+            elif self.timer==0:
+                # Updates what node the packet thinks it's at
+                self.deliver()
+                #get the next node and set this packet's connection to the one between current_node and next_node
+                if self.current_node.node_id != self.get_destination():
+                    next_node = self.current_node.next_hop(self.get_destination())
+                    self.set_connection(network.connections[network.get_node_pair_id(self.current_node.node_id, next_node.node_id)])
 
-        if self.current_node != self.get_destination():
-            # Updates what node the packet thinks it's at
-            self.deliver()
-            #get the next node and set this packet's connection to that between current_node and next_node
-            next_node = self.current_node.next_hop(self.get_destination())
-            self.set_connection(the_network.connections(self.current_node, next_node))
         else:
             #If the packet has reached its destination, delete it.
-            self.connection.removeTraffic()
-            del(the_network.packets[self.packet_id])
+            try: self.connection.removeTraffic()
+            except: pass
+            del(network.packets[self.packet_id])
 
     def deliver(self):
         self.current_node = self.connection.other_node(self.current_node)
@@ -60,4 +73,7 @@ class Packet:
 
     def get_destination(self):
         return self.payload.ip_datagram.segment.header.dest_port
+
+    def get_source(self):
+        return self.payload.ip_datagram.segment.header.src_port
 

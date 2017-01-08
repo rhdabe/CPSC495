@@ -5,7 +5,6 @@ __version__ = "1.0.0"
 import routing_table_algo
 import threading
 from src.Network import Network
-from src.Network import network
 
 class SimThread(threading.Thread):
 
@@ -67,32 +66,6 @@ class SimThread(threading.Thread):
         self.access_flag(write=True, value=False)
 
 
-
-
-def start_simulation(network, num=-1):
-    """Starts a new thread to run the simulation with the given global network object
-
-    returns a reference to the SimThread running the simulation so that the GUI thread
-    can stop the simulation.
-
-    SEE SimThread USAGE NOTE!!! (in SimThread class)
-    :type network: Network
-    :rtype SimThread"""
-
-    #compute routing tables for each node
-    tables=routing_table_algo.routing_tables(network)
-
-    #insert routing tables into the nodes
-    for node in network.nodes:
-        node.routing_table = tables[node.node_id]
-
-
-    thread = SimThread(sim_step, network, num)
-    thread.start()
-
-    return thread
-
-
 def sim_step(network):
     """This is the "step function" that will run the simulation ahead one tick.
 
@@ -107,8 +80,32 @@ def sim_step(network):
         if packet.timer > 0: packet.decrement_timer()
         else: packet.update_location(packet)
 
+def start_simulation(network, function=sim_step, num=-1):
+    """Starts a new thread to run the simulation with the given global network object
+
+    returns a reference to the SimThread running the simulation so that the GUI thread
+    can stop the simulation.
+
+    SEE SimThread USAGE NOTE!!! (in SimThread class)
+    :type network: Network
+    :rtype SimThread"""
+
+    #compute routing tables for each node
+    tables=routing_table_algo.routing_tables(network)
+
+    #insert routing tables into the nodes
+    for node in network.nodes.values():
+        node.routing_table = tables[node.node_id]
+
+
+    thread = SimThread(function, args=network, the_end=num)
+    thread.start()
+
+    return thread
+
+
 def tick():
-    start_simulation(network, 1)
+    start_simulation(Network.network, 1)
 
     '''
     Rhys's Notes - Rough Outline

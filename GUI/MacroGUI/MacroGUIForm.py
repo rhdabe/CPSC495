@@ -298,14 +298,10 @@ class Ui_MainWindow(object):
             self.txtConnectionBandwidth.hide()
 
     def addNode(self):
-        print "addNode() start"
         thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
-        print "constructed Node"
+
         self.nodes.append(thisNode)
-        print "appended new node to nodes list"
         self.placeNodeGraphic(thisNode)
-        print "placed node graphic for new node"
-        print "Finished addNode()\n"
 
     # deletes node, close on repaint
     def deleteSelectedNodes(self):
