@@ -200,20 +200,20 @@ class Ui_MainWindow(object):
         self.updateIntervalSpinner.setRange(0, 1000)
         self.updateIntervalSpinner.setSingleStep(100)
         self.dockSimulationControls.setWidget(self.dockSCContents)
+
+
         # some temp stuff
-
-
         MainWindow.setCentralWidget(self.centralwidget)
         self.actionNew = QtGui.QAction(MainWindow)
         self.actionNew.setObjectName(_fromUtf8("actionNew"))
-        self.actionOpen = QtGui.QAction(MainWindow)
-        self.actionOpen.setObjectName(_fromUtf8("actionOpen"))
-        self.actionRecent = QtGui.QAction(MainWindow)
-        self.actionRecent.setObjectName(_fromUtf8("actionRecent"))
-        self.actionSave = QtGui.QAction(MainWindow)
-        self.actionSave.setObjectName(_fromUtf8("actionSave"))
-        self.actionSave_As = QtGui.QAction(MainWindow)
-        self.actionSave_As.setObjectName(_fromUtf8("actionSave_As"))
+        # self.actionOpen = QtGui.QAction(MainWindow)
+        # self.actionOpen.setObjectName(_fromUtf8("actionOpen"))
+        # self.actionRecent = QtGui.QAction(MainWindow)
+        # self.actionRecent.setObjectName(_fromUtf8("actionRecent"))
+        # self.actionSave = QtGui.QAction(MainWindow)
+        # self.actionSave.setObjectName(_fromUtf8("actionSave"))
+        # self.actionSave_As = QtGui.QAction(MainWindow)
+        # self.actionSave_As.setObjectName(_fromUtf8("actionSave_As"))
         self.actionExit = QtGui.QAction(MainWindow)
         self.actionExit.setObjectName(_fromUtf8("actionExit"))
 
@@ -223,6 +223,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.cboNodeType.setCurrentIndex(0)
         self.cboConnectionType.setCurrentIndex(0)
+
         # calling functions from buttons here
         QtCore.QObject.connect(self.cboConnectionType, QtCore.SIGNAL(_fromUtf8("activated(int)")), self.decideBandwidth)
         QtCore.QObject.connect(self.btnAddConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addConnection)
@@ -263,10 +264,10 @@ class Ui_MainWindow(object):
         self.btnAddConnection.setText(_translate("MainWindow", "Add", None))
         self.btnDeleteConnection.setText(_translate("MainWindow", "Delete", None))
         self.actionNew.setText(_translate("MainWindow", "New", None))
-        self.actionOpen.setText(_translate("MainWindow", "Open", None))
-        self.actionRecent.setText(_translate("MainWindow", "Recent", None))
-        self.actionSave.setText(_translate("MainWindow", "Save", None))
-        self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
+        # self.actionOpen.setText(_translate("MainWindow", "Open", None))
+        # self.actionRecent.setText(_translate("MainWindow", "Recent", None))
+        # self.actionSave.setText(_translate("MainWindow", "Save", None))
+        # self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
         self.actionExit.setText(_translate("MainWindow", "Exit", None))
         self.btnStart.setText(_translate("MainWindow", "Start", None))
         self.btnNext.setText(_translate("MainWindow", "Next", None))
