@@ -50,10 +50,11 @@ class Ui_MainWindow(object):
         self.nodes = []
         self.connections = []
         self.MsgWindow = QtGui.QMainWindow(MainWindow)
-        self.centralwidget = NetworkFrame(MainWindow)#QtGui.QWidget(MainWindow)
+        self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
+        self.thisMainWindow = MainWindow
 
-        self.frameMain = self.centralwidget
+        self.frameMain = NetworkFrame(self.centralwidget)
 
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Background, QtCore.Qt.darkGray)
@@ -65,7 +66,7 @@ class Ui_MainWindow(object):
         self.frameMain.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frameMain.setFrameShadow(QtGui.QFrame.Raised)
         self.frameMain.setLineWidth(1)
-        #self.frameMain.setObjectName(_fromUtf8("frameMain"))
+        self.frameMain.setObjectName(_fromUtf8("frameMain"))
 
         #Node Properties QDockWidget
         self.dockNodeProperties = QtGui.QDockWidget(self.centralwidget)
@@ -204,7 +205,7 @@ class Ui_MainWindow(object):
 
 
         # some temp stuff
-        MainWindow.setCentralWidget(self.frameMain)#was self.centralwidget
+        MainWindow.setCentralWidget(self.centralwidget)
         self.actionNew = QtGui.QAction(MainWindow)
         self.actionNew.setObjectName(_fromUtf8("actionNew"))
         # self.actionOpen = QtGui.QAction(MainWindow)
@@ -400,19 +401,10 @@ class Ui_MainWindow(object):
             print "killing one of frameMain's kids (sans sip.delete)"
             print self.frameMain.children()
             del(self.frameMain.children()[0])
-            # sip.delete(self.frameMain.children()[0])
+
+           # sip.delete(self.frameMain.children()[0])
         print "mainFrame children slaughtered."
         self.rebuildFrameMainGraphics()
-
-    def clearLayout(layout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget() is not None:
-                child.widget().deleteLater()
-            elif child.layout() is not None:
-                clearLayout(child.layout())
-
-
 
     def rebuildFrameMainGraphics(self):
         print "rebuildFrameMainGraphics()"
