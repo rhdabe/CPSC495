@@ -51,79 +51,85 @@ class Ui_MainWindow(object):
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.thisMainWindow = MainWindow
+
         self.frameMain = NetworkFrame(self.centralwidget)
+
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Background, QtCore.Qt.darkGray)
+
         self.frameMain.setPalette(palette)
         self.frameMain.setAutoFillBackground(False)
-
         self.frameMain.setGeometry(QtCore.QRect(0, 0, 631, 521))
         self.frameMain.setAcceptDrops(True)
         self.frameMain.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frameMain.setFrameShadow(QtGui.QFrame.Raised)
         self.frameMain.setLineWidth(1)
         self.frameMain.setObjectName(_fromUtf8("frameMain"))
+
+        #Node Properties QDockWidget
         self.dockNodeProperties = QtGui.QDockWidget(self.centralwidget)
         self.dockNodeProperties.setGeometry(QtCore.QRect(580, 10, 211, 251))
         self.dockNodeProperties.setObjectName(_fromUtf8("dockNodeProperties"))
-        self.dockNCContents = QtGui.QWidget()
-        self.dockNCContents.setObjectName(_fromUtf8("dockNCContents"))
-        self.lblLocation = QtGui.QLabel(self.dockNCContents)
+        self.dockNPContents = QtGui.QWidget()
+        self.dockNPContents.setObjectName(_fromUtf8("dockNCContents"))
+        self.lblLocation = QtGui.QLabel(self.dockNPContents)
         self.lblLocation.setGeometry(QtCore.QRect(30, 50, 46, 13))
         self.lblLocation.setObjectName(_fromUtf8("lblLocation"))
-        self.lblType = QtGui.QLabel(self.dockNCContents)
+        self.lblType = QtGui.QLabel(self.dockNPContents)
         self.lblType.setGeometry(QtCore.QRect(20, 10, 71, 16))
         self.lblType.setObjectName(_fromUtf8("lblType"))
-        self.lblNetworkInfo = QtGui.QLabel(self.dockNCContents)
+        self.lblNetworkInfo = QtGui.QLabel(self.dockNPContents)
         self.lblNetworkInfo.setGeometry(QtCore.QRect(20, 90, 91, 16))
         self.lblNetworkInfo.setObjectName(_fromUtf8("lblNetworkInfo"))
         self.lblNetworkInfo.hide()
-        self.lblIP = QtGui.QLabel(self.dockNCContents)
+        self.lblIP = QtGui.QLabel(self.dockNPContents)
         self.lblIP.setGeometry(QtCore.QRect(50, 110, 46, 13))
         self.lblIP.setObjectName(_fromUtf8("lblIP"))
         self.lblIP.hide()
-        self.cboNodeType = QtGui.QComboBox(self.dockNCContents)
+        self.cboNodeType = QtGui.QComboBox(self.dockNPContents)
         self.cboNodeType.setGeometry(QtCore.QRect(108, 10, 81, 22))
         self.cboNodeType.setMaxVisibleItems(3)
         self.cboNodeType.setMaxCount(3)
         self.cboNodeType.setObjectName(_fromUtf8("cboNodeType"))
-        self.lblMAC = QtGui.QLabel(self.dockNCContents)
+        self.lblMAC = QtGui.QLabel(self.dockNPContents)
         self.lblMAC.setGeometry(QtCore.QRect(50, 140, 46, 13))
         self.lblMAC.setObjectName(_fromUtf8("lblMAC"))
         self.lblMAC.hide()
-        self.txtXPos = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtXPos = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtXPos.setGeometry(QtCore.QRect(90, 50, 51, 21))
         self.txtXPos.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtXPos.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtXPos.setObjectName(_fromUtf8("txtXPos"))
-        self.txtYPos = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtYPos = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtYPos.setGeometry(QtCore.QRect(160, 50, 51, 21))
         self.txtYPos.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtYPos.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtYPos.setObjectName(_fromUtf8("txtYPos"))
         self.frameMain.addPosition(self.txtXPos, self.txtYPos)
-        self.txtIP = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtIP = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtIP.setGeometry(QtCore.QRect(80, 110, 121, 21))
         self.txtIP.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtIP.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtIP.setObjectName(_fromUtf8("txtIP"))
         self.txtIP.hide()
-        self.txtMAC = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtMAC = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtMAC.setGeometry(QtCore.QRect(80, 140, 121, 21))
         self.txtMAC.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtMAC.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtMAC.setObjectName(_fromUtf8("txtMAC"))
         self.txtMAC.hide()
-        self.btnModifyNode = QtGui.QPushButton(self.dockNCContents)
+        self.btnModifyNode = QtGui.QPushButton(self.dockNPContents)
         self.btnModifyNode.setGeometry(QtCore.QRect(80, 200, 75, 23))
         self.btnModifyNode.setObjectName(_fromUtf8("btnModifyNode"))
-        self.btnDeleteNode = QtGui.QPushButton(self.dockNCContents)
+        self.btnDeleteNode = QtGui.QPushButton(self.dockNPContents)
         self.btnDeleteNode.setGeometry(QtCore.QRect(120, 170, 75, 23))
         self.btnDeleteNode.setObjectName(_fromUtf8("btnDeleteNode"))
-        self.btnAddNode = QtGui.QPushButton(self.dockNCContents)
+        self.btnAddNode = QtGui.QPushButton(self.dockNPContents)
         self.btnAddNode.setGeometry(QtCore.QRect(30, 170, 75, 23))
         self.btnAddNode.setObjectName(_fromUtf8("btnAddNode"))
-        self.dockNodeProperties.setWidget(self.dockNCContents)
+        self.dockNodeProperties.setWidget(self.dockNPContents)
+
+        #Connection Properties QDockWidget
         self.dockConnectionProperties = QtGui.QDockWidget(self.centralwidget)
         self.dockConnectionProperties.setGeometry(QtCore.QRect(560, 270, 211, 231))
         self.dockConnectionProperties.setObjectName(_fromUtf8("dockConnectionProperties"))
@@ -163,7 +169,8 @@ class Ui_MainWindow(object):
         self.btnDeleteConnection.setGeometry(QtCore.QRect(120, 140, 75, 23))
         self.btnDeleteConnection.setObjectName(_fromUtf8("btnDeleteConnection"))
         self.dockConnectionProperties.setWidget(self.dockCPContents)
-        # Simulation Controls
+
+        # Simulation Controls QDockWidget
         self.dockSimulationControls = QtGui.QDockWidget(self.centralwidget)
         self.dockSimulationControls.setGeometry(QtCore.QRect(550, 500, 225, 96))
         self.dockSimulationControls.setObjectName(_fromUtf8("dockSimulationControls"))
@@ -222,7 +229,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.btnDeleteConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteConnection)
         QtCore.QObject.connect(self.btnModifyConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.modifyConnection)
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addNode)
-        QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteNode)
+        QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteSelectedNodes)
         QtCore.QObject.connect(self.btnModifyNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.modifyNode)
         QtCore.QObject.connect(self.btnStart, QtCore.SIGNAL(_fromUtf8("clicked()")), self.startSimulation)
         QtCore.QObject.connect(self.btnNext, QtCore.SIGNAL(_fromUtf8("clicked()")), self.stepSimulation)
@@ -289,24 +296,38 @@ class Ui_MainWindow(object):
 
 
     def addNode(self):
+        print "addNode() start"
         thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+        print "constructed Node"
         self.nodes.append(thisNode)
+        print "appended new node to nodes list"
         self.placeNodeGraphic(thisNode)
+        print "placed node graphic for new node"
+        print "Finished addNode()\n"
 
     # deletes node, close on repaint
-    def deleteNode(self):
-        fullPass = False
-        while fullPass == False:
-            if not self.nodes:
-                break
-            for x in range(len(self.nodes)):
-                if self.nodes[x].isSelected:
-                    fullPass = False
-                    self.nodes.pop(x)
-                    break
-                else:
-                    fullPass = True
-                x = x + 1
+    def deleteSelectedNodes(self):
+        print "deleteSelectedNodes() start"
+        for x in range(len(self.nodes)-1,-1,-1):
+            if self.nodes[x].isSelected:
+                self.nodes.pop(x)
+        print "deleteSelectedNodes() finished\n"
+
+    #TODO integrate removal of nodes from simulation
+
+        #Darren's Code:
+        # fullPass = False
+        # while fullPass == False:
+        #     if not self.nodes:
+        #         break
+        #     for x in range(len(self.nodes)):
+        #         if self.nodes[x].isSelected:
+        #             fullPass = False
+        #             self.nodes.pop(x)
+        #             break
+        #         else:
+        #             fullPass = True
+        #         x = x + 1
         # call repaint
         self.clearAndRepaint()
 
@@ -553,7 +574,7 @@ class NodeLabel(QtGui.QLabel):
             else:
                 self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/switch.png")))
 
-
+#TODO I suspect this was overriding a method in Qt4, and was later deemed unnecessary.  Probably delete this.
 # def setGeometry(self, ax, ay, aw, ah):
 #        super(NodeLabel, self).setGeometry(ax, ay, aw, ah)
 #        self.myX = ax
