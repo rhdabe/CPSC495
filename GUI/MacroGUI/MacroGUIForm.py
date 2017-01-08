@@ -402,8 +402,9 @@ class Ui_MainWindow(object):
             child = self.frameMain.children()[0]
             child.setParent(None) #Immediately removes child from children list of parent
             child.deleteLater() #Don't care really when this happens.  Want to avoid sip.delete hangups.
-
-           # sip.delete(self.frameMain.children()[0]) #This hangs up sometimes for unknown reason.
+           # sip.delete(self.frameMain.children()[0])
+                #sip.delete() hangs up sometimes for unknown reason.
+                # Node number and deletion order dependent.  Highly reproducible.
         print "mainFrame children slaughtered."
         self.rebuildFrameMainGraphics()
 
