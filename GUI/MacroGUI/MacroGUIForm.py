@@ -11,12 +11,12 @@ __version__ = "1.0.1"
 from PyQt4 import QtCore, QtGui
 
 from Node import *
-#from src.Connection import *
-# from src.Node import *
-#from src.SimulationLoop import *
+from src.Connection import *
+#from src.Node import *
+from src.SimulationLoop import *
 from SendMessageWindow import SendMessage_Window
 from src.SimulationLoop import tick
-import sip
+# import sip
 import time
 
 try:
@@ -42,7 +42,7 @@ class Ui_MainWindow(object):
     simulation_paused = False
 
     #My hope is that this will magically keep Qt from deleting labels prematurely...
-    nodeLabels = []
+    #nodeLabels = []
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
@@ -297,7 +297,6 @@ class Ui_MainWindow(object):
             self.lblConnectionBandwidth.hide()
             self.txtConnectionBandwidth.hide()
 
-
     def addNode(self):
         print "addNode() start"
         thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
@@ -338,20 +337,36 @@ class Ui_MainWindow(object):
 
     # modifies node, mostly working intermittent error
     def modifyNode(self):
-        tooMany = False
-        foundOne = False
-        for x in range(len(self.nodes)):
-            if self.nodes[x].isSelected and not foundOne:
-                foundOne = True
-                nodeToModifyIndex = x
-            elif self.nodes[x].isSelected and foundOne:
-                tooMany = True
-                break
-            x = x + 1
-        if tooMany:
-            print "Can only modify one node at a time"
-        else:
-            self.nodes[nodeToModifyIndex] = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+
+        # TODO Modify multiple selection process as follows:
+        # 1:
+        #   instead of searching through all labels to find the selected ones,
+        #   store a list of selected labels.
+        # 2:
+        #   if exactly one NodeLabel.isSelected(): enable modify button
+        #   else: disable modify button
+        # 3:
+        #   require use of Shift+Click to select more than one label.
+
+
+
+
+        #Darren's code
+        # tooMany = False
+        # foundOne = False
+        # for x in range(len(self.nodes)):
+        #     if self.nodes[x].isSelected and not foundOne:
+        #         foundOne = True
+        #         nodeToModifyIndex = x
+        #     elif self.nodes[x].isSelected and foundOne:
+        #         tooMany = True
+        #         break
+        #     x = x + 1
+        # if tooMany:
+        #     print "Can only modify one node at a time"
+        # else:
+        #     self.nodes[nodeToModifyIndex] = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+        #
         # call repaint
         self.clearAndRepaint()
 
@@ -394,14 +409,13 @@ class Ui_MainWindow(object):
 
     def clearAndRepaint(self):
         print "clearAndRepaint()"
-        self.nodeLabels=[]
-        print "nodeLabels=[]"
+        #self.nodeLabels=[]
         #for x in range(len(self.frameMain.children())):
         while self.frameMain.children():
             print "deleteLater one of frameMain's kids)"
             child = self.frameMain.children()[0]
             child.setParent(None) #Immediately removes child from children list of parent
-            child.deleteLater() #Don't care really when this happens.  Want to avoid sip.delete hangups.
+            child.deleteLater() #Don't care when this happens.  Want to avoid sip.delete() hangups.
            # sip.delete(self.frameMain.children()[0])
                 #sip.delete() hangs up sometimes for unknown reason.
                 # Node number and deletion order dependent.  Highly reproducible.
@@ -440,7 +454,7 @@ class Ui_MainWindow(object):
         y1 = int(nodePosition[1])
 
         self.lblNode = NodeLabel(self.frameMain)
-        self.nodeLabels.append(self.lblNode)
+        #self.nodeLabels.append(self.lblNode)
         self.lblNode.setGeometry(x1, y1, 41, 31)
         self.lblNode.setText(_fromUtf8(""))
         self.lblNode.nodeObject = aNode
@@ -545,7 +559,7 @@ class Ui_MainWindow(object):
         self.simulation_paused = False
 
         while True and not self.simulation_paused:
-            SimulationLoop.tick()
+            tick()
             time.sleep(self.updateIntervalSpinner.value() / 1000)
 
         while True and not self.simulation_paused and self.simulation_started:
@@ -567,14 +581,13 @@ class NodeLabel(QtGui.QLabel):
     # myH = 0
     #These appear unnecessary
 
-    def __init__(self, parent):
-        self.nodeObject = None
-        QtGui.QLabel.__init__(self,parent)
-
     def mouseDoubleClickEvent(self, ev):
         print "double click event"
 
     def mousePressEvent(self, ev):
+
+        # TODO add Shift + Click for multiple selection
+
         point = ev.pos()
 
         self.nodeObject.toggleIsSelected()
@@ -618,6 +631,7 @@ class NetworkFrame(QtGui.QFrame):
         self.txtYPosBox = tbYpos
 
     def mousePressEvent(self, ev):
+
         point = ev.pos()
         posX = self.round10((point.x() + self.myX), 10)
         posY = self.round10((point.y() + self.myY), 10)

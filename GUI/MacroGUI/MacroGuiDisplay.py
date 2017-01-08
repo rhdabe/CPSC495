@@ -1,3 +1,5 @@
+#TODO This appears to be unused code... probably get rid of it sometime.
+
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
