@@ -11,12 +11,12 @@ __version__ = "1.0.1"
 from PyQt4 import QtCore, QtGui
 
 from Node import *
-#from src.Connection import *
-# from src.Node import *
-#from src.SimulationLoop import *
+from src.Connection import *
+#from src.Node import *
+from src.SimulationLoop import *
 from SendMessageWindow import SendMessage_Window
 from src.SimulationLoop import tick
-import sip
+# import sip
 import time
 
 try:
@@ -40,90 +40,98 @@ class Ui_MainWindow(object):
     simulation_thread = None
     simulation_started = False
     simulation_paused = False
-    connections = []
-    nodes = []
+
+    #My hope is that this will magically keep Qt from deleting labels prematurely...
+    #nodeLabels = []
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
-
+        self.nodes = []
+        self.connections = []
         self.MsgWindow = QtGui.QMainWindow(MainWindow)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.thisMainWindow = MainWindow
+
         self.frameMain = NetworkFrame(self.centralwidget)
+
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Background, QtCore.Qt.darkGray)
+
         self.frameMain.setPalette(palette)
         self.frameMain.setAutoFillBackground(False)
-
         self.frameMain.setGeometry(QtCore.QRect(0, 0, 631, 521))
         self.frameMain.setAcceptDrops(True)
         self.frameMain.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frameMain.setFrameShadow(QtGui.QFrame.Raised)
         self.frameMain.setLineWidth(1)
         self.frameMain.setObjectName(_fromUtf8("frameMain"))
+
+        #Node Properties QDockWidget
         self.dockNodeProperties = QtGui.QDockWidget(self.centralwidget)
         self.dockNodeProperties.setGeometry(QtCore.QRect(580, 10, 211, 251))
         self.dockNodeProperties.setObjectName(_fromUtf8("dockNodeProperties"))
-        self.dockNCContents = QtGui.QWidget()
-        self.dockNCContents.setObjectName(_fromUtf8("dockNCContents"))
-        self.lblLocation = QtGui.QLabel(self.dockNCContents)
+        self.dockNPContents = QtGui.QWidget()
+        self.dockNPContents.setObjectName(_fromUtf8("dockNCContents"))
+        self.lblLocation = QtGui.QLabel(self.dockNPContents)
         self.lblLocation.setGeometry(QtCore.QRect(30, 50, 46, 13))
         self.lblLocation.setObjectName(_fromUtf8("lblLocation"))
-        self.lblType = QtGui.QLabel(self.dockNCContents)
+        self.lblType = QtGui.QLabel(self.dockNPContents)
         self.lblType.setGeometry(QtCore.QRect(20, 10, 71, 16))
         self.lblType.setObjectName(_fromUtf8("lblType"))
-        self.lblNetworkInfo = QtGui.QLabel(self.dockNCContents)
+        self.lblNetworkInfo = QtGui.QLabel(self.dockNPContents)
         self.lblNetworkInfo.setGeometry(QtCore.QRect(20, 90, 91, 16))
         self.lblNetworkInfo.setObjectName(_fromUtf8("lblNetworkInfo"))
         self.lblNetworkInfo.hide()
-        self.lblIP = QtGui.QLabel(self.dockNCContents)
+        self.lblIP = QtGui.QLabel(self.dockNPContents)
         self.lblIP.setGeometry(QtCore.QRect(50, 110, 46, 13))
         self.lblIP.setObjectName(_fromUtf8("lblIP"))
         self.lblIP.hide()
-        self.cboNodeType = QtGui.QComboBox(self.dockNCContents)
+        self.cboNodeType = QtGui.QComboBox(self.dockNPContents)
         self.cboNodeType.setGeometry(QtCore.QRect(108, 10, 81, 22))
         self.cboNodeType.setMaxVisibleItems(3)
         self.cboNodeType.setMaxCount(3)
         self.cboNodeType.setObjectName(_fromUtf8("cboNodeType"))
-        self.lblMAC = QtGui.QLabel(self.dockNCContents)
+        self.lblMAC = QtGui.QLabel(self.dockNPContents)
         self.lblMAC.setGeometry(QtCore.QRect(50, 140, 46, 13))
         self.lblMAC.setObjectName(_fromUtf8("lblMAC"))
         self.lblMAC.hide()
-        self.txtXPos = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtXPos = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtXPos.setGeometry(QtCore.QRect(90, 50, 51, 21))
         self.txtXPos.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtXPos.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtXPos.setObjectName(_fromUtf8("txtXPos"))
-        self.txtYPos = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtYPos = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtYPos.setGeometry(QtCore.QRect(160, 50, 51, 21))
         self.txtYPos.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtYPos.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtYPos.setObjectName(_fromUtf8("txtYPos"))
         self.frameMain.addPosition(self.txtXPos, self.txtYPos)
-        self.txtIP = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtIP = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtIP.setGeometry(QtCore.QRect(80, 110, 121, 21))
         self.txtIP.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtIP.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtIP.setObjectName(_fromUtf8("txtIP"))
         self.txtIP.hide()
-        self.txtMAC = QtGui.QPlainTextEdit(self.dockNCContents)
+        self.txtMAC = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtMAC.setGeometry(QtCore.QRect(80, 140, 121, 21))
         self.txtMAC.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtMAC.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtMAC.setObjectName(_fromUtf8("txtMAC"))
         self.txtMAC.hide()
-        self.btnModifyNode = QtGui.QPushButton(self.dockNCContents)
+        self.btnModifyNode = QtGui.QPushButton(self.dockNPContents)
         self.btnModifyNode.setGeometry(QtCore.QRect(80, 200, 75, 23))
         self.btnModifyNode.setObjectName(_fromUtf8("btnModifyNode"))
-        self.btnDeleteNode = QtGui.QPushButton(self.dockNCContents)
+        self.btnDeleteNode = QtGui.QPushButton(self.dockNPContents)
         self.btnDeleteNode.setGeometry(QtCore.QRect(120, 170, 75, 23))
         self.btnDeleteNode.setObjectName(_fromUtf8("btnDeleteNode"))
-        self.btnAddNode = QtGui.QPushButton(self.dockNCContents)
+        self.btnAddNode = QtGui.QPushButton(self.dockNPContents)
         self.btnAddNode.setGeometry(QtCore.QRect(30, 170, 75, 23))
         self.btnAddNode.setObjectName(_fromUtf8("btnAddNode"))
-        self.dockNodeProperties.setWidget(self.dockNCContents)
+        self.dockNodeProperties.setWidget(self.dockNPContents)
+
+        #Connection Properties QDockWidget
         self.dockConnectionProperties = QtGui.QDockWidget(self.centralwidget)
         self.dockConnectionProperties.setGeometry(QtCore.QRect(560, 270, 211, 231))
         self.dockConnectionProperties.setObjectName(_fromUtf8("dockConnectionProperties"))
@@ -163,7 +171,8 @@ class Ui_MainWindow(object):
         self.btnDeleteConnection.setGeometry(QtCore.QRect(120, 140, 75, 23))
         self.btnDeleteConnection.setObjectName(_fromUtf8("btnDeleteConnection"))
         self.dockConnectionProperties.setWidget(self.dockCPContents)
-        # Simulation Controls
+
+        # Simulation Controls QDockWidget
         self.dockSimulationControls = QtGui.QDockWidget(self.centralwidget)
         self.dockSimulationControls.setGeometry(QtCore.QRect(550, 500, 225, 96))
         self.dockSimulationControls.setObjectName(_fromUtf8("dockSimulationControls"))
@@ -193,20 +202,20 @@ class Ui_MainWindow(object):
         self.updateIntervalSpinner.setRange(0, 1000)
         self.updateIntervalSpinner.setSingleStep(100)
         self.dockSimulationControls.setWidget(self.dockSCContents)
+
+
         # some temp stuff
-
-
         MainWindow.setCentralWidget(self.centralwidget)
         self.actionNew = QtGui.QAction(MainWindow)
         self.actionNew.setObjectName(_fromUtf8("actionNew"))
-        self.actionOpen = QtGui.QAction(MainWindow)
-        self.actionOpen.setObjectName(_fromUtf8("actionOpen"))
-        self.actionRecent = QtGui.QAction(MainWindow)
-        self.actionRecent.setObjectName(_fromUtf8("actionRecent"))
-        self.actionSave = QtGui.QAction(MainWindow)
-        self.actionSave.setObjectName(_fromUtf8("actionSave"))
-        self.actionSave_As = QtGui.QAction(MainWindow)
-        self.actionSave_As.setObjectName(_fromUtf8("actionSave_As"))
+        # self.actionOpen = QtGui.QAction(MainWindow)
+        # self.actionOpen.setObjectName(_fromUtf8("actionOpen"))
+        # self.actionRecent = QtGui.QAction(MainWindow)
+        # self.actionRecent.setObjectName(_fromUtf8("actionRecent"))
+        # self.actionSave = QtGui.QAction(MainWindow)
+        # self.actionSave.setObjectName(_fromUtf8("actionSave"))
+        # self.actionSave_As = QtGui.QAction(MainWindow)
+        # self.actionSave_As.setObjectName(_fromUtf8("actionSave_As"))
         self.actionExit = QtGui.QAction(MainWindow)
         self.actionExit.setObjectName(_fromUtf8("actionExit"))
 
@@ -216,13 +225,14 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.cboNodeType.setCurrentIndex(0)
         self.cboConnectionType.setCurrentIndex(0)
+
         # calling functions from buttons here
         QtCore.QObject.connect(self.cboConnectionType, QtCore.SIGNAL(_fromUtf8("activated(int)")), self.decideBandwidth)
         QtCore.QObject.connect(self.btnAddConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addConnection)
         QtCore.QObject.connect(self.btnDeleteConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteConnection)
         QtCore.QObject.connect(self.btnModifyConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.modifyConnection)
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addNode)
-        QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteNode)
+        QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteSelectedNodes)
         QtCore.QObject.connect(self.btnModifyNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.modifyNode)
         QtCore.QObject.connect(self.btnStart, QtCore.SIGNAL(_fromUtf8("clicked()")), self.startSimulation)
         QtCore.QObject.connect(self.btnNext, QtCore.SIGNAL(_fromUtf8("clicked()")), self.stepSimulation)
@@ -256,10 +266,10 @@ class Ui_MainWindow(object):
         self.btnAddConnection.setText(_translate("MainWindow", "Add", None))
         self.btnDeleteConnection.setText(_translate("MainWindow", "Delete", None))
         self.actionNew.setText(_translate("MainWindow", "New", None))
-        self.actionOpen.setText(_translate("MainWindow", "Open", None))
-        self.actionRecent.setText(_translate("MainWindow", "Recent", None))
-        self.actionSave.setText(_translate("MainWindow", "Save", None))
-        self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
+        # self.actionOpen.setText(_translate("MainWindow", "Open", None))
+        # self.actionRecent.setText(_translate("MainWindow", "Recent", None))
+        # self.actionSave.setText(_translate("MainWindow", "Save", None))
+        # self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
         self.actionExit.setText(_translate("MainWindow", "Exit", None))
         self.btnStart.setText(_translate("MainWindow", "Start", None))
         self.btnNext.setText(_translate("MainWindow", "Next", None))
@@ -287,45 +297,76 @@ class Ui_MainWindow(object):
             self.lblConnectionBandwidth.hide()
             self.txtConnectionBandwidth.hide()
 
-
     def addNode(self):
+        print "addNode() start"
         thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+        print "constructed Node"
         self.nodes.append(thisNode)
+        print "appended new node to nodes list"
         self.placeNodeGraphic(thisNode)
+        print "placed node graphic for new node"
+        print "Finished addNode()\n"
 
     # deletes node, close on repaint
-    def deleteNode(self):
-        fullPass = False
-        while fullPass == False:
-            if not self.nodes:
-                break
-            for x in range(len(self.nodes)):
-                if self.nodes[x].isSelected:
-                    fullPass = False
-                    self.nodes.pop(x)
-                    break
-                else:
-                    fullPass = True
-                x = x + 1
+    def deleteSelectedNodes(self):
+        print "deleteSelectedNodes() start"
+        for x in range(len(self.nodes)-1,-1,-1):
+            if self.nodes[x].isSelected:
+                self.nodes.pop(x)
+
+
+    #TODO integrate removal of nodes from simulation
+
+        #Darren's Code:
+        # fullPass = False
+        # while fullPass == False:
+        #     if not self.nodes:
+        #         break
+        #     for x in range(len(self.nodes)):
+        #         if self.nodes[x].isSelected:
+        #             fullPass = False
+        #             self.nodes.pop(x)
+        #             break
+        #         else:
+        #             fullPass = True
+        #         x = x + 1
         # call repaint
         self.clearAndRepaint()
 
+        print "deleteSelectedNodes() finished\n"
+
     # modifies node, mostly working intermittent error
     def modifyNode(self):
-        tooMany = False
-        foundOne = False
-        for x in range(len(self.nodes)):
-            if self.nodes[x].isSelected and not foundOne:
-                foundOne = True
-                nodeToModifyIndex = x
-            elif self.nodes[x].isSelected and foundOne:
-                tooMany = True
-                break
-            x = x + 1
-        if tooMany:
-            print "Can only modify one node at a time"
-        else:
-            self.nodes[nodeToModifyIndex] = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+
+        # TODO Modify multiple selection process as follows:
+        # 1:
+        #   instead of searching through all labels to find the selected ones,
+        #   store a list of selected labels.
+        # 2:
+        #   if exactly one NodeLabel.isSelected(): enable modify button
+        #   else: disable modify button
+        # 3:
+        #   require use of Shift+Click to select more than one label.
+
+
+
+
+        #Darren's code
+        # tooMany = False
+        # foundOne = False
+        # for x in range(len(self.nodes)):
+        #     if self.nodes[x].isSelected and not foundOne:
+        #         foundOne = True
+        #         nodeToModifyIndex = x
+        #     elif self.nodes[x].isSelected and foundOne:
+        #         tooMany = True
+        #         break
+        #     x = x + 1
+        # if tooMany:
+        #     print "Can only modify one node at a time"
+        # else:
+        #     self.nodes[nodeToModifyIndex] = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+        #
         # call repaint
         self.clearAndRepaint()
 
@@ -367,15 +408,27 @@ class Ui_MainWindow(object):
             # call repaint
 
     def clearAndRepaint(self):
-        for x in range(len(self.frameMain.children())):
-            sip.delete(self.frameMain.children()[0])
-
+        print "clearAndRepaint()"
+        #self.nodeLabels=[]
+        #for x in range(len(self.frameMain.children())):
+        while self.frameMain.children():
+            print "deleteLater one of frameMain's kids)"
+            child = self.frameMain.children()[0]
+            child.setParent(None) #Immediately removes child from children list of parent
+            child.deleteLater() #Don't care when this happens.  Want to avoid sip.delete() hangups.
+           # sip.delete(self.frameMain.children()[0])
+                #sip.delete() hangs up sometimes for unknown reason.
+                # Node number and deletion order dependent.  Highly reproducible.
+        print "mainFrame children slaughtered."
         self.rebuildFrameMainGraphics()
 
     def rebuildFrameMainGraphics(self):
-
+        print "rebuildFrameMainGraphics()"
         for x in range(len(self.nodes)):
+            print"attempt to place graphic for node", x
             self.placeNodeGraphic(self.nodes[x])
+            print x, "placed"
+        print "done placing node graphics"
 
         for x in range(len(self.connections)):
             connectionNodes = self.connections[x].getConnectionNodes()
@@ -401,6 +454,7 @@ class Ui_MainWindow(object):
         y1 = int(nodePosition[1])
 
         self.lblNode = NodeLabel(self.frameMain)
+        #self.nodeLabels.append(self.lblNode)
         self.lblNode.setGeometry(x1, y1, 41, 31)
         self.lblNode.setText(_fromUtf8(""))
         self.lblNode.nodeObject = aNode
@@ -505,7 +559,7 @@ class Ui_MainWindow(object):
         self.simulation_paused = False
 
         while True and not self.simulation_paused:
-            SimulationLoop.tick()
+            tick()
             time.sleep(self.updateIntervalSpinner.value() / 1000)
 
         while True and not self.simulation_paused and self.simulation_started:
@@ -521,17 +575,19 @@ class Ui_MainWindow(object):
 
 
 class NodeLabel(QtGui.QLabel):
-    myX = 0
-    myY = 0
-    myW = 0
-    myH = 0
-
-    nodeObject = None
+    # myX = 0
+    # myY = 0
+    # myW = 0
+    # myH = 0
+    #These appear unnecessary
 
     def mouseDoubleClickEvent(self, ev):
         print "double click event"
 
     def mousePressEvent(self, ev):
+
+        # TODO add Shift + Click for multiple selection
+
         point = ev.pos()
 
         self.nodeObject.toggleIsSelected()
@@ -553,7 +609,7 @@ class NodeLabel(QtGui.QLabel):
             else:
                 self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/switch.png")))
 
-
+#TODO I suspect this was overriding a method in Qt4, and was later deemed unnecessary.  Probably delete this.
 # def setGeometry(self, ax, ay, aw, ah):
 #        super(NodeLabel, self).setGeometry(ax, ay, aw, ah)
 #        self.myX = ax
@@ -575,6 +631,7 @@ class NetworkFrame(QtGui.QFrame):
         self.txtYPosBox = tbYpos
 
     def mousePressEvent(self, ev):
+
         point = ev.pos()
         posX = self.round10((point.x() + self.myX), 10)
         posY = self.round10((point.y() + self.myY), 10)
