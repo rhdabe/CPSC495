@@ -40,19 +40,20 @@ class Ui_MainWindow(object):
     simulation_thread = None
     simulation_started = False
     simulation_paused = False
-    connections = []
-    nodes = []
+
+    #My hope is that this will magically keep Qt from deleting labels prematurely...
+    nodeLabels = []
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
-
+        self.nodes = []
+        self.connections = []
         self.MsgWindow = QtGui.QMainWindow(MainWindow)
-        self.centralwidget = QtGui.QWidget(MainWindow)
+        self.centralwidget = NetworkFrame(MainWindow)#QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
-        self.thisMainWindow = MainWindow
 
-        self.frameMain = NetworkFrame(self.centralwidget)
+        self.frameMain = self.centralwidget
 
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Background, QtCore.Qt.darkGray)
@@ -64,7 +65,7 @@ class Ui_MainWindow(object):
         self.frameMain.setFrameShape(QtGui.QFrame.StyledPanel)
         self.frameMain.setFrameShadow(QtGui.QFrame.Raised)
         self.frameMain.setLineWidth(1)
-        self.frameMain.setObjectName(_fromUtf8("frameMain"))
+        #self.frameMain.setObjectName(_fromUtf8("frameMain"))
 
         #Node Properties QDockWidget
         self.dockNodeProperties = QtGui.QDockWidget(self.centralwidget)
@@ -203,7 +204,7 @@ class Ui_MainWindow(object):
 
 
         # some temp stuff
-        MainWindow.setCentralWidget(self.centralwidget)
+        MainWindow.setCentralWidget(self.frameMain)#was self.centralwidget
         self.actionNew = QtGui.QAction(MainWindow)
         self.actionNew.setObjectName(_fromUtf8("actionNew"))
         # self.actionOpen = QtGui.QAction(MainWindow)
@@ -312,7 +313,7 @@ class Ui_MainWindow(object):
         for x in range(len(self.nodes)-1,-1,-1):
             if self.nodes[x].isSelected:
                 self.nodes.pop(x)
-        print "deleteSelectedNodes() finished\n"
+
 
     #TODO integrate removal of nodes from simulation
 
@@ -331,6 +332,8 @@ class Ui_MainWindow(object):
         #         x = x + 1
         # call repaint
         self.clearAndRepaint()
+
+        print "deleteSelectedNodes() finished\n"
 
     # modifies node, mostly working intermittent error
     def modifyNode(self):
@@ -389,15 +392,35 @@ class Ui_MainWindow(object):
             # call repaint
 
     def clearAndRepaint(self):
-        for x in range(len(self.frameMain.children())):
-            sip.delete(self.frameMain.children()[0])
-
+        print "clearAndRepaint()"
+        self.nodeLabels=[]
+        print "nodeLabels=[]"
+        #for x in range(len(self.frameMain.children())):
+        while self.frameMain.children():
+            print "killing one of frameMain's kids (sans sip.delete)"
+            print self.frameMain.children()
+            del(self.frameMain.children()[0])
+            # sip.delete(self.frameMain.children()[0])
+        print "mainFrame children slaughtered."
         self.rebuildFrameMainGraphics()
 
-    def rebuildFrameMainGraphics(self):
+    def clearLayout(layout):
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget() is not None:
+                child.widget().deleteLater()
+            elif child.layout() is not None:
+                clearLayout(child.layout())
 
+
+
+    def rebuildFrameMainGraphics(self):
+        print "rebuildFrameMainGraphics()"
         for x in range(len(self.nodes)):
+            print"attempt to place graphic for node", x
             self.placeNodeGraphic(self.nodes[x])
+            print x, "placed"
+        print "done placing node graphics"
 
         for x in range(len(self.connections)):
             connectionNodes = self.connections[x].getConnectionNodes()
@@ -423,6 +446,7 @@ class Ui_MainWindow(object):
         y1 = int(nodePosition[1])
 
         self.lblNode = NodeLabel(self.frameMain)
+        self.nodeLabels.append(self.lblNode)
         self.lblNode.setGeometry(x1, y1, 41, 31)
         self.lblNode.setText(_fromUtf8(""))
         self.lblNode.nodeObject = aNode
@@ -543,12 +567,15 @@ class Ui_MainWindow(object):
 
 
 class NodeLabel(QtGui.QLabel):
-    myX = 0
-    myY = 0
-    myW = 0
-    myH = 0
+    # myX = 0
+    # myY = 0
+    # myW = 0
+    # myH = 0
+    #These appear unnecessary
 
-    nodeObject = None
+    def __init__(self, parent):
+        self.nodeObject = None
+        QtGui.QLabel.__init__(self,parent)
 
     def mouseDoubleClickEvent(self, ev):
         print "double click event"
