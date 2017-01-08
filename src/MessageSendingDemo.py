@@ -76,8 +76,6 @@ def table_step(network):
 
     time.sleep(1)
 
-
-
 def get_graph():
     network = Network.network
     graph = network.get_as_graph()
@@ -112,11 +110,6 @@ def get_packet_table():
                 " ETA " + str(ETA)
             string += "\n"
     return string
-
-
-
-def get_table():
-    return get_packet_table()
 
 def add_n_host_line(n):
     network = Network.network

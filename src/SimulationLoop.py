@@ -5,6 +5,7 @@ __version__ = "1.0.0"
 import routing_table_algo
 import threading
 from src.Network import Network
+import src
 
 class SimThread(threading.Thread):
 
@@ -30,9 +31,9 @@ class SimThread(threading.Thread):
         self.lock = threading.Lock()
 
     def run(self):
-        """The run method executes function(args) theEnd times, or if theEnd < 0 runs until stopped
+        """The run method executes function(args) theEnd times (see __init__), or if theEnd < 0 runs until stopped
 
-        function is a function to be called
+        function is a function to be called every time step
         args is a tuple specifying the arguments to function, defaults to ()
         theEnd is an integer indicating how many times function should be performed, defaults to -1 (run forever)"""
 
@@ -66,24 +67,12 @@ class SimThread(threading.Thread):
         self.access_flag(write=True, value=False)
 
 
-def sim_step(network):
-    """This is the "step function" that will run the simulation ahead one tick.
-
-    The idea is that a SimThread will loop through this either a specified number of times, or until
-    it is told to stop. Each pass through the loop updates every network entity in sequence, decrementing wait counters
-    and moving messages around as appropriate.
-
-    :type network Network"""
-
-
-    for packet in network.packets.values():
-        if packet.timer > 0: packet.decrement_timer()
-        else: packet.update_location(packet)
-
 def start_simulation(network, function=sim_step, num=-1):
-    """Starts a new thread to run the simulation with the given global network object
+    """Starts a new SimThread to run the simulation with the given global network object, function, and number of steps.
 
-    returns a reference to the SimThread running the simulation so that the GUI thread
+    Defaults to use of the sim_step function, and to perpetual run mode.
+
+    Returns a reference to the SimThread running the simulation so that the GUI thread
     can stop the simulation.
 
     SEE SimThread USAGE NOTE!!! (in SimThread class)
@@ -102,6 +91,22 @@ def start_simulation(network, function=sim_step, num=-1):
     thread.start()
 
     return thread
+
+def sim_step(network):
+    """This is the "step function" that will run the simulation ahead one tick.
+
+    The idea is that a SimThread will loop through this either a specified number of times, or until
+    it is told to stop. Each pass through the loop updates every network entity in sequence, decrementing wait counters
+    and moving messages around as appropriate.
+
+    :type network Network"""
+
+
+    src.MessageSendingDemo.table_step()
+
+    # for packet in network.packets.values():
+    #     if packet.timer > 0: packet.decrement_timer()
+    #     else: packet.update_location(packet)
 
 
 def tick():
