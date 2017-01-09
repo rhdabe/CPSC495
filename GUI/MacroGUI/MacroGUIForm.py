@@ -12,9 +12,8 @@ from PyQt4 import QtCore, QtGui
 
 import src.Network
 from Node import *
-from src.SimulationLoop import *
+import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
-from src.SimulationLoop import tick
 # import sip
 import time
 
@@ -36,15 +35,18 @@ except AttributeError:
 
 
 class Ui_MainWindow(object):
-    simulation_thread = None
-    simulation_started = False
-    simulation_paused = False
+
 
     #TODO remove nodeLabels everywhere
     #My hope is that this will magically keep Qt from deleting labels prematurely...
     #nodeLabels = []
 
     def setupUi(self, MainWindow):
+
+        self.simulation_thread = None
+        self.simulation_started = False
+        self.simulation_paused = False
+
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
         self.nodes = []
@@ -544,29 +546,27 @@ class Ui_MainWindow(object):
 
 
     def startSimulation(self):
+        print "startSimulation"
         if not self.simulation_started:
             self.simulation_started = True
 
         src.Network.network_init()
 
     def stepSimulation(self):
-        if self.simulation_started:
-            tick()
+        print "stepSimulation"
+        if self.simulation_started and self.simulation_paused: src.SimulationLoop.tick()
 
     def playSimulation(self):
+        print "playSimulation"
         self.simulation_paused = False
-
-        while True and not self.simulation_paused:
-            tick()
-            time.sleep(self.updateIntervalSpinner.value() / 1000)
-
-        while True and not self.simulation_paused and self.simulation_started:
-            tick()
-            time.sleep(self.updateIntervalSpinner.value()/1000)
-
+        #time.sleep() accepts time in seconds.  Spinner displays in ms.
+        interval = float(self.updateIntervalSpinner.value() / 1000)
+        self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval)
 
     def pauseSimulation(self):
+        print"pauseSimulation"
         self.simulation_paused = True
+        self.simulation_thread.end()
 
     def openMsgWindow(self):  # Method to open button window
         SendMessage_Window(self.MsgWindow)

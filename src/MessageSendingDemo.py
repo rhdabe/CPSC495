@@ -10,7 +10,7 @@ from SimulationLoop import SimThread
 import time
 
 import Network
-from routing_table_algo import routing_tables
+from routingTableAlgorithm import routingTables
 
 
 def get_graph():
@@ -104,7 +104,7 @@ def n_node_demo(n):
     network = Network.network
     add_n_host_line(n)
 
-    tables = routing_tables(network)
+    tables = routingTables(network)
 
     #Set the routing tables in all the nodes
     for node in network.nodes.values():

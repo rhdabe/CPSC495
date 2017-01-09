@@ -2,10 +2,11 @@
 __author__ = "Rhys Beck"
 __version__ = "1.0.0"
 
-import routing_table_algo
+import routingTableAlgorithm
 import threading
+import time
 import src.Network
-import src.MessageSendingDemo
+import src.StepFunctions
 
 class SimThread(threading.Thread):
 
@@ -16,40 +17,40 @@ class SimThread(threading.Thread):
 
     #lock will be used to synchronize threads accessing the run flag.
 
-    def __init__(self, function, args=(), the_end=-1):
+    def __init__(self, function, args=(), updateInterval=-1):
         """Initializes a new SimThread which will run function(args) the_end times
 
         :type function function
         :type args tuple
-        :type the_end integer"""
+        :type updateInterval integer"""
 
         threading.Thread.__init__(self)
         self.runFlag = True
         self.function = function
         self.args = args
-        self.theEnd = the_end
-        self.lock = threading.Lock()
+        self.updateInterval = updateInterval
+        self.lock = threading.RLock()
 
     def run(self):
-        """The run method executes function(args) theEnd times (see __init__), or if theEnd < 0 runs until stopped
-
-        function is a function to be called every time step
+        #TODO fix docstring
+        """Executes function(args) every updateInterval (ms).  If updateInterval<0 or unspecified, runs continuously.
         args is a tuple specifying the arguments to function, defaults to ()
-        theEnd is an integer indicating how many times function should be performed, defaults to -1 (run forever)"""
+        updateInterval is an integer indicating how many milliseconds should elapse between functino calls. Defaults to
+        -1 (run forever)"""
 
-        time = 0
-
-        while (self.theEnd < 0 or time < self.theEnd) and self.access_flag():
+        while self.access_run_flag():
+            if self.updateInterval > 0:
+                print "going to sleep for", self.updateInterval
+                time.sleep(self.updateInterval)
+                print "Okimasu!"
             self.function(self.args)
-            time += 1
 
-    def access_flag(self, write=False, value=False):
+    def access_run_flag(self, write=False, value=False):
         """Provides single read or write access to no more than one thread at a time.
 
         if write is true, value indicates what boolean value to set the run flag to.
         :type write: boolean
         :type value: boolean"""
-
 
         self.lock.acquire()
 
@@ -64,9 +65,9 @@ class SimThread(threading.Thread):
 
     def end(self):
         """Sets the runFlag to False, causing this SimThread to terminate once the current simulation cycle ends."""
-        self.access_flag(write=True, value=False)
+        self.access_run_flag(write=True, value=False)
 
-def sim_step(network):
+def simStep(network):
     """This is the "step function" that will run the simulation ahead one tick.
 
     The idea is that a SimThread will loop through this either a specified number of times, or until
@@ -76,13 +77,13 @@ def sim_step(network):
     :type network Network"""
 
     #for testing purposes
-    src.MessageSendingDemo.table_step()
+    src.StepFunctions.table_step(network)
 
     # for packet in network.packets.values():
     #     if packet.timer > 0: packet.decrement_timer()
     #     else: packet.update_location(packet)
 
-def start_simulation(network, function=sim_step, num=-1):
+def start_simulation(network, function=simStep, updateInterval=-1):
     """Starts a new SimThread to run the simulation with the given global network object, function, and number of steps.
 
     Defaults to use of the sim_step function, and to perpetual run mode.
@@ -95,20 +96,22 @@ def start_simulation(network, function=sim_step, num=-1):
     :rtype SimThread"""
 
     #compute routing tables for each node
-    tables=routing_table_algo.routing_tables(network)
+    tables=routingTableAlgorithm.routingTables(network)
 
     #insert routing tables into the nodes
     for node in network.nodes.values():
         node.routing_table = tables[node.node_id]
 
 
-    thread = SimThread(function, args=network, the_end=num)
+    thread = SimThread(function, args=network, updateInterval=updateInterval)
     thread.start()
 
     return thread
 
 def tick():
-    start_simulation(src.Network.network, num=1)
+    #TODO docstring
+    print "tick()"
+    start_simulation(src.Network.network, updateInterval=500)
 
     '''
     Rhys's Notes - Rough Outline

@@ -8,7 +8,7 @@ from src.Network import *
 #            6:{3:4,4:4,5:5}}
 
 
-def routing_tables(network):
+def routingTables(network):
     tables = {}
     #if isinstance(network, Network):
 
@@ -91,7 +91,7 @@ def dijkstra2(graph, source_id, dest_id, visited=[], distances={}, parents={}):
 
 
 if __name__ == "__main__":
-    tables = routing_tables(network)
+    tables = routingTables(network)
     for node,table in zip(tables.keys(),tables.values()): print node, table
 
 
