@@ -11,6 +11,7 @@ __version__ = "1.0.1"
 from PyQt4 import QtCore, QtGui
 
 import src.Network
+import src.Node as SimulationNode
 from Node import *
 import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
@@ -37,20 +38,19 @@ except AttributeError:
 class Ui_MainWindow(object):
 
 
-    #TODO remove nodeLabels everywhere
-    #My hope is that this will magically keep Qt from deleting labels prematurely...
-    #nodeLabels = []
-
     def setupUi(self, MainWindow):
 
         self.simulation_thread = None
         self.simulation_started = False
         self.simulation_paused = False
 
+        self.nodes = {}
+        self.selectedNodes = {}
+        self.connections = []
+
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
-        self.nodes = []
-        self.connections = []
+
         self.MsgWindow = QtGui.QMainWindow(MainWindow)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
@@ -125,6 +125,7 @@ class Ui_MainWindow(object):
         self.btnModifyNode = QtGui.QPushButton(self.dockNPContents)
         self.btnModifyNode.setGeometry(QtCore.QRect(80, 200, 75, 23))
         self.btnModifyNode.setObjectName(_fromUtf8("btnModifyNode"))
+        self.btnModifyNode.setEnabled(False)
         self.btnDeleteNode = QtGui.QPushButton(self.dockNPContents)
         self.btnDeleteNode.setGeometry(QtCore.QRect(120, 170, 75, 23))
         self.btnDeleteNode.setObjectName(_fromUtf8("btnDeleteNode"))
@@ -300,46 +301,48 @@ class Ui_MainWindow(object):
             self.txtConnectionBandwidth.hide()
 
     def addNode(self):
-        thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+        nodeType = self.cboNodeType.currentText()
 
-        self.nodes.append(thisNode)
+        #Create the GUI node
+        thisNode = Node(nodeType, self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+        self.nodes[int(thisNode.getUniqueID())] = thisNode
         self.placeNodeGraphic(thisNode)
+
+        #Create the simulation node
+        if nodeType == "Host":
+            src.Network.network.add_node(SimulationNode.Host())
+        elif nodeType == "Router":
+            src.Network.network.add_node(SimulationNode.Router())
+        elif nodeType == "Switch":
+            src.Network.network.add_node(SimulationNode.Switch())
 
     # deletes node, close on repaint
     def deleteSelectedNodes(self):
-        print "deleteSelectedNodes() start"
-        for x in range(len(self.nodes)-1,-1,-1):
-            if self.nodes[x].isSelected:
-                self.nodes.pop(x)
 
+        for node_id in self.selectedNodes.keys():
+            #remove node from nodes dictionary
+            self.nodes.pop(node_id)
+            #remove node from selectedNodes dictionary
+            self.selectedNodes.pop(node_id)
+            #remove the corresponding network node
+            src.Network.network.remove_node(node_id)
 
-    #TODO integrate removal of nodes from simulation
+        #TODO recompute routing tables
 
-        #Darren's Code:
-        # fullPass = False
-        # while fullPass == False:
-        #     if not self.nodes:
-        #         break
-        #     for x in range(len(self.nodes)):
-        #         if self.nodes[x].isSelected:
-        #             fullPass = False
-        #             self.nodes.pop(x)
-        #             break
-        #         else:
-        #             fullPass = True
-        #         x = x + 1
-        # call repaint
         self.clearAndRepaint()
 
-        print "deleteSelectedNodes() finished\n"
+    def isNodeSelected(self, node):
+        if self.selectedNodes.get(int(node.getUniqueID()), False): return True
+        else: return False
+
+    def checkModifyNode(self):
+        if len(self.selectedNodes) > 0: self.btnModifyNode.setEnabled(True)
+        else: self.btnModifyNode.setEnabled(False)
 
     # modifies node, mostly working intermittent error
     def modifyNode(self):
 
         # TODO Modify multiple selection process as follows:
-        # 1:
-        #   instead of searching through all labels to find the selected ones,
-        #   store a list of selected labels.
         # 2:
         #   if exactly one NodeLabel.isSelected(): enable modify button
         #   else: disable modify button
@@ -348,7 +351,7 @@ class Ui_MainWindow(object):
 
 
 
-
+        #TODO Remove this
         #Darren's code
         # tooMany = False
         # foundOne = False
@@ -406,27 +409,20 @@ class Ui_MainWindow(object):
             # call repaint
 
     def clearAndRepaint(self):
-        print "clearAndRepaint()"
-        #self.nodeLabels=[]
-        #for x in range(len(self.frameMain.children())):
         while self.frameMain.children():
-            print "deleteLater one of frameMain's kids)"
             child = self.frameMain.children()[0]
             child.setParent(None) #Immediately removes child from children list of parent
             child.deleteLater() #Don't care when this happens.  Want to avoid sip.delete() hangups.
            # sip.delete(self.frameMain.children()[0])
                 #sip.delete() hangs up sometimes for unknown reason.
                 # Node number and deletion order dependent.  Highly reproducible.
-        print "mainFrame children slaughtered."
         self.rebuildFrameMainGraphics()
 
     def rebuildFrameMainGraphics(self):
-        print "rebuildFrameMainGraphics()"
-        for x in range(len(self.nodes)):
-            print"attempt to place graphic for node", x
+        for x in self.nodes.keys():
             self.placeNodeGraphic(self.nodes[x])
-            print x, "placed"
-        print "done placing node graphics"
+
+         #TODO this may need to change later too (if it needs to be a dictionary instead)
 
         for x in range(len(self.connections)):
             connectionNodes = self.connections[x].getConnectionNodes()
@@ -452,7 +448,7 @@ class Ui_MainWindow(object):
         y1 = int(nodePosition[1])
 
         self.lblNode = NodeLabel(self.frameMain)
-        #self.nodeLabels.append(self.lblNode)
+        self.lblNode.setMainWindow(self)
         self.lblNode.setGeometry(x1, y1, 41, 31)
         self.lblNode.setText(_fromUtf8(""))
         self.lblNode.nodeObject = aNode
@@ -573,11 +569,9 @@ class Ui_MainWindow(object):
 
 
 class NodeLabel(QtGui.QLabel):
-    # myX = 0
-    # myY = 0
-    # myW = 0
-    # myH = 0
-    #These appear unnecessary
+
+    def setMainWindow(self, mw):
+        self.mainWindow = mw
 
     def mouseDoubleClickEvent(self, ev):
         print "double click event"
@@ -586,13 +580,17 @@ class NodeLabel(QtGui.QLabel):
 
         # TODO add Shift + Click for multiple selection
 
-        point = ev.pos()
+        if self.mainWindow.isNodeSelected(self.nodeObject):
+            self.mainWindow.selectedNodes.pop(int(self.nodeObject.getUniqueID()) , None)
+        else:
+            self.mainWindow.selectedNodes[int(self.nodeObject.getUniqueID())] = self.nodeObject
 
-        self.nodeObject.toggleIsSelected()
         self.highlightSelected()
 
+        self.mainWindow.checkModifyNode()
+
     def highlightSelected(self):
-        if self.nodeObject.isSelected:
+        if self.mainWindow.isNodeSelected(self.nodeObject):
             if self.nodeObject.getType() == "Host":
                 self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/pc_hl.png")))
             elif self.nodeObject.getType() == "Router":
@@ -606,14 +604,6 @@ class NodeLabel(QtGui.QLabel):
                 self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/router.png")))
             else:
                 self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/switch.png")))
-
-#TODO I suspect this was overriding a method in Qt4, and was later deemed unnecessary.  Probably delete this.
-# def setGeometry(self, ax, ay, aw, ah):
-#        super(NodeLabel, self).setGeometry(ax, ay, aw, ah)
-#        self.myX = ax
-#       self.myY = ay
-#        self.myW = aw
-#        self.myH = ah
 
 
 class NetworkFrame(QtGui.QFrame):

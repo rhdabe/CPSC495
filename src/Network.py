@@ -103,6 +103,6 @@ class Network:
 def network_init():
     global network
     network = Network()
-    Node.Node.node_id=0
+    Node.Node.static_id=0
     Connection.static_id=0
     Packet.static_packet_id = 0

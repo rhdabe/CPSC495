@@ -91,7 +91,7 @@ def add_node(connected_node_id, latency):
     connected_node = network.nodes[connected_node_id]
     new_node = Host()
     network.add_node(new_node)
-    network.add_connection(new_node.node_id, connected_node_id, Connection(new_node, connected_node, latency))
+    network.add_connection(new_node.static_id, connected_node_id, Connection(new_node, connected_node, latency))
 
 def remove_node(node_id):
     #Wrapped Network function for convenience
