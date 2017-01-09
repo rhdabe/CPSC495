@@ -56,6 +56,10 @@ class Node(object):
     def getNetworkInfo(self):
         return self.__NetworkInfo
 
+    def modify(self, nodeType, x, y):
+        self.setLocation(x,y)
+        self.setType(nodeType)
+
     def getUniqueID(self):
         return str(self.__Node_ID)
 

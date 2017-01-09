@@ -301,14 +301,22 @@ class Ui_MainWindow(object):
             self.txtConnectionBandwidth.hide()
 
     def addNode(self):
-        nodeType = self.cboNodeType.currentText()
-
-        #Create the GUI node
-        thisNode = Node(nodeType, self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
+       #Create the GUI node
+        thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
         self.nodes[int(thisNode.getUniqueID())] = thisNode
         self.placeNodeGraphic(thisNode)
 
+        print "addNode GUI Nodes"
+        print self.nodes
+
         #Create the simulation node
+        self.addSimulationNode()
+
+        print "addNode Simulation Nodes"
+        print src.Network.network.nodes
+
+    def addSimulationNode(self):
+        nodeType = self.cboNodeType.currentText()
         if nodeType == "Host":
             src.Network.network.add_node(SimulationNode.Host())
         elif nodeType == "Router":
@@ -336,42 +344,36 @@ class Ui_MainWindow(object):
         else: return False
 
     def checkModifyNode(self):
-        if len(self.selectedNodes) > 0: self.btnModifyNode.setEnabled(True)
+        if len(self.selectedNodes) == 1: self.btnModifyNode.setEnabled(True)
         else: self.btnModifyNode.setEnabled(False)
 
-    # modifies node, mostly working intermittent error
     def modifyNode(self):
+        #Checking of whether node modification is allowed is handled by enabling/disabling btnModifyNode.
+        #(called from NodeLabel.mousePressedEvent())
+        #This method should not be called other than by the pressing of said button.
 
         # TODO Modify multiple selection process as follows:
-        # 2:
-        #   if exactly one NodeLabel.isSelected(): enable modify button
-        #   else: disable modify button
         # 3:
         #   require use of Shift+Click to select more than one label.
 
+        selectedNode = self.selectedNodes.values()[0]
 
+        #"Modify" GUI node (Remove old node and create new one with the new characteristics.  Necessary because
+        #                 simulation nodes must be handled this way, and therefore so too must GUI nodes
+        #                 otherwise their id's will no longer match.)
+        #TODO This sort of nonsense is a good case for consolidating the two nodes into a single class. Consider it.
+        self.deleteSelectedNodes()
+        self.addNode()
 
-        #TODO Remove this
-        #Darren's code
-        # tooMany = False
-        # foundOne = False
-        # for x in range(len(self.nodes)):
-        #     if self.nodes[x].isSelected and not foundOne:
-        #         foundOne = True
-        #         nodeToModifyIndex = x
-        #     elif self.nodes[x].isSelected and foundOne:
-        #         tooMany = True
-        #         break
-        #     x = x + 1
-        # if tooMany:
-        #     print "Can only modify one node at a time"
-        # else:
-        #     self.nodes[nodeToModifyIndex] = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
-        #
-        # call repaint
         self.clearAndRepaint()
 
     def addConnection(self):
+
+
+
+
+        #Darren's code
+        #TODO remove this
         tooMany = False
         numNodes = 0
 
@@ -407,6 +409,34 @@ class Ui_MainWindow(object):
             self.clearAndRepaint()
 
             # call repaint
+
+    def isConnectionSelected(self, connection):
+        if self.selectedConnections.get(int(connection.getUniqueID()), False): return True
+        else: return False
+
+    def checkModifyConnection(self):
+        if len(self.selectedConnections) == 2: self.btnModifyConnection.setEnabled(True)
+        else: self.btnModifyConnection.setEnabled(False)
+
+    def modifyConnection(self):
+        #Checking of whether connection modification is allowed is handled by enabling/disabling btnModifyConnection.
+        #(called from NodeLabel.mousePressedEvent())
+        #This method should not be called other than by the pressing of said button.
+
+        # TODO Modify multiple selection process as follows:
+        # 3:
+        #   require use of Shift+Click to select more than one connection.
+
+        selectedNode = self.selectedNodes.values()[0]
+
+        #"Modify" GUI node (Remove old node and create new one with the new characteristics.  Necessary because
+        #                 simulation nodes must be handled this way, and therefore so too must GUI nodes
+        #                 otherwise their id's will no longer match.)
+        #TODO This sort of nonsense is a good case for consolidating the two nodes into a single class. Consider it.
+        self.deleteSelectedNodes()
+        self.addNode()
+
+        self.clearAndRepaint()
 
     def clearAndRepaint(self):
         while self.frameMain.children():
@@ -588,6 +618,7 @@ class NodeLabel(QtGui.QLabel):
         self.highlightSelected()
 
         self.mainWindow.checkModifyNode()
+        self.mainWindow.checkModifyConnection()
 
     def highlightSelected(self):
         if self.mainWindow.isNodeSelected(self.nodeObject):
