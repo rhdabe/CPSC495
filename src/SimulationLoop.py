@@ -4,8 +4,8 @@ __version__ = "1.0.0"
 
 import routing_table_algo
 import threading
-from src.Network import Network
-import src
+import src.Network
+import src.MessageSendingDemo
 
 class SimThread(threading.Thread):
 
@@ -66,6 +66,21 @@ class SimThread(threading.Thread):
         """Sets the runFlag to False, causing this SimThread to terminate once the current simulation cycle ends."""
         self.access_flag(write=True, value=False)
 
+def sim_step(network):
+    """This is the "step function" that will run the simulation ahead one tick.
+
+    The idea is that a SimThread will loop through this either a specified number of times, or until
+    it is told to stop. Each pass through the loop updates every network entity in sequence, decrementing wait counters
+    and moving messages around as appropriate.
+
+    :type network Network"""
+
+    #for testing purposes
+    src.MessageSendingDemo.table_step()
+
+    # for packet in network.packets.values():
+    #     if packet.timer > 0: packet.decrement_timer()
+    #     else: packet.update_location(packet)
 
 def start_simulation(network, function=sim_step, num=-1):
     """Starts a new SimThread to run the simulation with the given global network object, function, and number of steps.
@@ -92,25 +107,8 @@ def start_simulation(network, function=sim_step, num=-1):
 
     return thread
 
-def sim_step(network):
-    """This is the "step function" that will run the simulation ahead one tick.
-
-    The idea is that a SimThread will loop through this either a specified number of times, or until
-    it is told to stop. Each pass through the loop updates every network entity in sequence, decrementing wait counters
-    and moving messages around as appropriate.
-
-    :type network Network"""
-
-
-    src.MessageSendingDemo.table_step()
-
-    # for packet in network.packets.values():
-    #     if packet.timer > 0: packet.decrement_timer()
-    #     else: packet.update_location(packet)
-
-
 def tick():
-    start_simulation(Network.network, 1)
+    start_simulation(src.Network.network, num=1)
 
     '''
     Rhys's Notes - Rough Outline

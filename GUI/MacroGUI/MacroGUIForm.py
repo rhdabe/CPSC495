@@ -10,9 +10,8 @@ __version__ = "1.0.1"
 
 from PyQt4 import QtCore, QtGui
 
+import src.Network
 from Node import *
-from src.Connection import *
-#from src.Node import *
 from src.SimulationLoop import *
 from SendMessageWindow import SendMessage_Window
 from src.SimulationLoop import tick
@@ -41,6 +40,7 @@ class Ui_MainWindow(object):
     simulation_started = False
     simulation_paused = False
 
+    #TODO remove nodeLabels everywhere
     #My hope is that this will magically keep Qt from deleting labels prematurely...
     #nodeLabels = []
 
@@ -546,6 +546,8 @@ class Ui_MainWindow(object):
     def startSimulation(self):
         if not self.simulation_started:
             self.simulation_started = True
+
+        src.Network.network_init()
 
     def stepSimulation(self):
         if self.simulation_started:
