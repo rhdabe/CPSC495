@@ -384,11 +384,9 @@ class Ui_MainWindow(object):
 
         src.Network.network.add_connection(node1.getIDInt(), node2.getIDInt(), simConnection)
 
-        print"Add Connection"
-        print src.Network.network.connections
-
         #Add GUI connection
-        self.connections.append(simConnection.connection_id)
+        nodeTuple = src.Network.network.get_node_pair_id(node1.getIDInt(), node2.getIDInt())
+        self.connections.append(nodeTuple)
         self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, node1, node2)
 
 
@@ -422,17 +420,6 @@ class Ui_MainWindow(object):
         # else:
         #     print "Must select 2 nodes before attempting to create a connection"
 
-    def deleteConnection(self, connection):
-        #This one gets called by Darren's code with a specified connection
-        #TODO this will likely be unnecessary later.  Remember to remove it.
-        for x in range(len(self.connections)):
-            if self.connections[x].getIDNT == connection.getIDInt():
-                self.connections.pop(x)
-
-            self.clearAndRepaint()
-
-            # call repaint
-
     def deleteConnection(self):
          #This gets called by the button press.
         for connection in self.selectedConnections:
@@ -441,8 +428,8 @@ class Ui_MainWindow(object):
 
         self.clearAndRepaint()
 
-    def isConnectionSelected(self, connectionID):
-        if self.selectedConnections.__contains__(connectionID): return True
+    def isConnectionSelected(self, endNodesTuple):
+        if self.selectedConnections.__contains__(endNodesTuple): return True
         else: return False
 
     def checkModifyConnection(self):
@@ -483,9 +470,10 @@ class Ui_MainWindow(object):
         for x in self.nodes.keys():
             self.placeNodeGraphic(self.nodes[x])
 
-        for connectionID in self.connections:
-            connection = src.Network.network.getConnection[connectionID]
-            self.placeConnectionGraphic(connectionID, connection.connectionType, connection.node[0], connection.nodes[1])
+        for node1ID,node2ID in self.connections:
+            connection = src.Network.network.get_connection(node1ID, node2ID)
+            self.placeConnectionGraphic(connection.connection_id, connection.connectionType,
+                                        self.nodes[node1ID], self.nodes[node2ID])
 
          #TODO this may need to change later too (if it needs to be a dictionary instead)
 
@@ -590,8 +578,7 @@ class Ui_MainWindow(object):
 
         self.linConnection = NetworkConnection(self.frameMain)
         self.linConnection.connectionID = connectionID
-        self.linConnection.firstNodeID = firstNodeID
-        self.linConnection.secondNodeID = secondNodeID
+        self.linConnection.nodeTuple = src.Network.network.get_node_pair_id(firstNodeID,secondNodeID)
         self.linConnection.setMainWindow(self)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, lineLength, 6))
         self.linConnection.setStyleSheet(_fromUtf8("color:" + lineColor))
@@ -606,8 +593,7 @@ class Ui_MainWindow(object):
 
         self.linConnection = NetworkConnection(self.frameMain)
         self.linConnection.connectionID = connectionID
-        self.linConnection.firstNodeID = firstNodeID
-        self.linConnection.secondNodeID = secondNodeID
+        self.linConnection.nodeTuple = src.Network.network.get_node_pair_id(firstNodeID,secondNodeID)
         self.linConnection.setMainWindow(self)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, 6, lineLength))
         self.linConnection.setStyleSheet(_fromUtf8("color:" + lineColor))
@@ -714,7 +700,6 @@ class NetworkConnection(QtGui.QFrame):
 
     def setMainWindow(self, mw):
         self.mainWindow = mw
-        print "main window set for connection", self.connectionID
 
     def getLatency(self):
         #TODO make this actually correct
@@ -727,14 +712,13 @@ class NetworkConnection(QtGui.QFrame):
         return 200
 
     def mousePressEvent(self, ev):
-        print "Connection number", self.connectionID, "clicked"
         # TODO add Shift + Click for multiple selection
         # TODO disable add/remove connection buttons at appropriate times.
 
-        if self.mainWindow.isConnectionSelected(self.connectionID):
-            self.mainWindow.selectedConnections.remove(self.connectionID)
+        if self.mainWindow.isConnectionSelected(self.nodeTuple):
+            self.mainWindow.selectedConnections.remove(self.nodeTuple)
         else:
-            self.mainWindow.selectedConnections.append(self.connectionID)
+            self.mainWindow.selectedConnections.append(self.nodeTuple)
 
         self.highlightSelected()
 
@@ -743,17 +727,14 @@ class NetworkConnection(QtGui.QFrame):
 
     def highlightSelected(self):
 
-        print "NetworkConnection.highlightSelected()"
-        print self.mainWindow.selectedConnections
-
         vertical = self.parent().findChild(NetworkConnection, (_fromUtf8(str(self.connectionID) + "V")));
         horizontal = self.parent().findChild(NetworkConnection, (_fromUtf8(str(self.connectionID) + "H")));
 
-        if self.mainWindow.isConnectionSelected(self.connectionID):
+        if self.mainWindow.isConnectionSelected(self.nodeTuple):
             vertical.setStyleSheet(_fromUtf8("color:" + "yellow"))
             horizontal.setStyleSheet(_fromUtf8("color:" + "yellow"))
         else:
-            connection = src.Network.network.get_connection(self.firstNodeID, self.secondNodeID)
+            connection = src.Network.network.get_connection(self.nodeTuple[0], self.nodeTuple[1])
             if connection.connectionType == "Coax":
                 vertical.setStyleSheet(_fromUtf8("color:" + "blue"))
                 horizontal.setStyleSheet(_fromUtf8("color:" + "blue"))
