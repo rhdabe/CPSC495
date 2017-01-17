@@ -531,6 +531,9 @@ class Ui_MainWindow(object):
 
     def placeConnectionGraphic(self, connectionID, connectionType, firstNode, secondNode):
 
+        firstNodeID = firstNode.getIDInt();
+        secondNodeID = secondNode.getIDInt();
+
         # connection will always be a pair of lines 1 horizontal and 1 vertical
 
         # find center of firstNode image as start x, y
@@ -555,40 +558,40 @@ class Ui_MainWindow(object):
         if (x2 - x1) > 0:  # x direction from node 1 to node 2 is positive
             if (y2 - y1) > 0:  # y direction from node 1 to node 2 is positive
                 if (x2 - x1) > (y2 - y1):  # line in x direction is longer than y
-                    self.drawHorizontalLine(x1, y1, (x2 - x1), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x1, y1, (x2 - x1), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID, firstNodeID, secondNodeID)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID, firstNodeID, secondNodeID)
             else:  # y direction from node 1 to node 2 is negative
                 if (x2 - x1) > (y1 - y2):  # line in x direction is longer than y
-                    self.drawHorizontalLine(x1, y1, (x2 - x1 + 6), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x1, y1, (x2 - x1 + 6), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID, firstNodeID, secondNodeID)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID, firstNodeID, secondNodeID)
         else:  # x direction from node 1 to node 2 is negative
             if (y2 - y1) > 0:  # y direction from node 1 to node 2 is positive
                 if (x1 - x2) > (y2 - y1):  # line in x is longer than y
-                    self.drawHorizontalLine(x2, y1, (x1 - x2 + 6), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x2, y1, (x1 - x2 + 6), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID, firstNodeID, secondNodeID)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID, firstNodeID, secondNodeID)
             else:  # y direction from node 1 to node 2 is negative
                 if (x1 - x2) > (y1 - y2):  # line in x is longer than y
-                    self.drawHorizontalLine(x2, y1, (x1 - x2), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x2, y1, (x1 - x2), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID, firstNodeID, secondNodeID)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
-                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID, firstNodeID, secondNodeID)
+                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID, firstNodeID, secondNodeID)
 
-    def drawHorizontalLine(self, xPos, yPos, lineLength, lineColor, connectionID, firstNode, secondNode):
+    def drawHorizontalLine(self, xPos, yPos, lineLength, lineColor, connectionID, firstNodeID, secondNodeID):
 
         self.linConnection = NetworkConnection(self.frameMain)
         self.linConnection.connectionID = connectionID
-        self.linConnection.firstNode = firstNode
-        self.linConnection.secondNode = secondNode
+        self.linConnection.firstNodeID = firstNodeID
+        self.linConnection.secondNodeID = secondNodeID
         self.linConnection.setMainWindow(self)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, lineLength, 6))
         self.linConnection.setStyleSheet(_fromUtf8("color:" + lineColor))
@@ -599,12 +602,12 @@ class Ui_MainWindow(object):
         self.linConnection.lower()
         self.linConnection.show()
 
-    def drawVerticalLine(self, xPos, yPos, lineLength, lineColor, connectionID, firstNode, secondNode):
+    def drawVerticalLine(self, xPos, yPos, lineLength, lineColor, connectionID, firstNodeID, secondNodeID):
 
         self.linConnection = NetworkConnection(self.frameMain)
         self.linConnection.connectionID = connectionID
-        self.linConnection.firstNode = firstNode
-        self.linConnection.secondNode = secondNode
+        self.linConnection.firstNodeID = firstNodeID
+        self.linConnection.secondNodeID = secondNodeID
         self.linConnection.setMainWindow(self)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, 6, lineLength))
         self.linConnection.setStyleSheet(_fromUtf8("color:" + lineColor))
@@ -745,11 +748,11 @@ class NetworkConnection(QtGui.QFrame):
         if self.mainWindow.isConnectionSelected(self.connectionID):
             self.setStyleSheet(_fromUtf8("color:" + "yellow"))
         else:
-            nodes =
-            if src.Network.network.c == "Coax":
-                self.setStyleSheet(_fromUtf8("color:" + "red"))
-            elif self.nodeObject.getType() == "Fiber":
+            connection = src.Network.network.get_connection(self.firstNodeID, self.secondNodeID)
+            if connection.connectionType == "Coax":
                 self.setStyleSheet(_fromUtf8("color:" + "blue"))
+            elif connection.connectionType == "Fiber":
+                self.setStyleSheet(_fromUtf8("color:" + "red"))
             else:
                 self.setStyleSheet(_fromUtf8("color:" + "green"))
 
