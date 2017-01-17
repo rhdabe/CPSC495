@@ -63,5 +63,8 @@ class Node(object):
     def getUniqueID(self):
         return str(self.__Node_ID)
 
+    def getIDInt(self):
+        return self.__Node_ID
+
     def toggleIsSelected(self):
         self.isSelected = not self.isSelected

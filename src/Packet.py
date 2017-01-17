@@ -20,6 +20,7 @@ class Packet:
     #Need an id so the Packet dictionary in Network works the same as the others
     static_packet_id = 0
     def __init__(self, node, payload):
+        #Note that current_node and connection are object references, not id values.
         self.connection = None
         self.payload = payload
         self.current_node = node

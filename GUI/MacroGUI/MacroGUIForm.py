@@ -12,6 +12,7 @@ from PyQt4 import QtCore, QtGui
 
 import src.Network
 import src.Node as SimulationNode
+import src.Connection as SimulationConnection
 from Node import *
 import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
@@ -47,6 +48,7 @@ class Ui_MainWindow(object):
         self.nodes = {}
         self.selectedNodes = {}
         self.connections = []
+        self.selectedConnections = []
 
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
@@ -306,14 +308,9 @@ class Ui_MainWindow(object):
         self.nodes[int(thisNode.getUniqueID())] = thisNode
         self.placeNodeGraphic(thisNode)
 
-        print "addNode GUI Nodes"
-        print self.nodes
-
         #Create the simulation node
         self.addSimulationNode()
 
-        print "addNode Simulation Nodes"
-        print src.Network.network.nodes
 
     def addSimulationNode(self):
         nodeType = self.cboNodeType.currentText()
@@ -340,7 +337,7 @@ class Ui_MainWindow(object):
         self.clearAndRepaint()
 
     def isNodeSelected(self, node):
-        if self.selectedNodes.get(int(node.getUniqueID()), False): return True
+        if self.selectedNodes.get(node.getIDInt(), False): return True
         else: return False
 
     def checkModifyNode(self):
@@ -351,6 +348,7 @@ class Ui_MainWindow(object):
         #Checking of whether node modification is allowed is handled by enabling/disabling btnModifyNode.
         #(called from NodeLabel.mousePressedEvent())
         #This method should not be called other than by the pressing of said button.
+        #TODO consider adding an exception in the case not exactly one node is selected when we get to here
 
         # TODO Modify multiple selection process as follows:
         # 3:
@@ -369,53 +367,84 @@ class Ui_MainWindow(object):
 
     def addConnection(self):
 
+        #TODO consider adding an exception in the case not exactly two nodes are selected when we get here
+        #TODO consider adding multiple connections when multiple nodes are selected
+        #Easiest would be to make a complete graph out of the selected nodes.
+
+        selectedNodes = self.selectedNodes.values()
+
+        node1 = selectedNodes[0]
+        node2 = selectedNodes[1]
+
+        #Add simulation connection
+        simNodes = src.Network.network.nodes
+        simConnection = SimulationConnection.Connection(simNodes[node1.getIDInt()], simNodes[node2.getIDInt()],
+                                       self.cboConnectionType.currentText(),
+                                       self.txtConnectionLength.toPlainText())
+
+        src.Network.network.add_connection(node1.getIDInt(), node2.getIDInt(), simConnection)
+
+        #Add GUI connection
+        self.connections.append(simConnection.connection_id)
+        self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, node1, node2)
 
 
 
         #Darren's code
         #TODO remove this
-        tooMany = False
-        numNodes = 0
-
-        for x in range(len(self.nodes)):
-            if self.nodes[x].isSelected and numNodes == 0:
-                node1 = self.nodes[x]
-                numNodes = numNodes + 1
-            elif self.nodes[x].isSelected and numNodes == 1:
-                node2 = self.nodes[x]
-                numNodes = numNodes + 1
-            elif self.nodes[x].isSelected and numNodes == 2:
-                tooMany = True
-            x = x + 1
-
-        if not tooMany and numNodes == 2:
-            connection = Connection(node1, node2, self.txtConnectionBandwidth.toPlainText())
-            connection.connectionType = self.cboConnectionType.currentText()
-            connection.connectionLength = self.txtConnectionLength.toPlainText()
-            connection.connectionBandWidth = self.txtConnectionBandwidth.toPlainText()
-            self.connections.append(connection)
-
-            self.placeConnectionGraphic(connection.connection_id, connection.connectionType, node1, node2)
-        elif tooMany:
-            print "Cant select more than 2 nodes before attempting to create a connection"
-        else:
-            print "Must select 2 nodes before attempting to create a connection"
+        # tooMany = False
+        # numNodes = 0
+        #
+        # for x in range(len(self.nodes)):
+        #     if self.nodes[x].isSelected and numNodes == 0:
+        #         node1 = self.nodes[x]
+        #         numNodes = numNodes + 1
+        #     elif self.nodes[x].isSelected and numNodes == 1:
+        #         node2 = self.nodes[x]
+        #         numNodes = numNodes + 1
+        #     elif self.nodes[x].isSelected and numNodes == 2:
+        #         tooMany = True
+        #     x = x + 1
+        #
+        # if not tooMany and numNodes == 2:
+        #     connection = Connection(node1, node2, self.txtConnectionBandwidth.toPlainText())
+        #     connection.connectionType = self.cboConnectionType.currentText()
+        #     connection.connectionLength = self.txtConnectionLength.toPlainText()
+        #     connection.connectionBandWidth = self.txtConnectionBandwidth.toPlainText()
+        #     self.connections.append(connection)
+        #
+        #     self.placeConnectionGraphic(connection.connection_id, connection.connectionType, node1, node2)
+        # elif tooMany:
+        #     print "Cant select more than 2 nodes before attempting to create a connection"
+        # else:
+        #     print "Must select 2 nodes before attempting to create a connection"
 
     def deleteConnection(self, connection):
+        #This one gets called by Darren's code with a specified connection
+        #TODO this will likely be unnecessary later.  Remember to remove it.
         for x in range(len(self.connections)):
-            if self.connections[x].getUniqueID == connection.getUniqueID:
+            if self.connections[x].getIDNT == connection.getIDInt():
                 self.connections.pop(x)
 
             self.clearAndRepaint()
 
             # call repaint
 
+    def deleteConnection(self):
+         #This gets called by the button press.
+        for connection in self.selectedConnections:
+            self.connections.remove(connection)
+            self.selectedConnections.remove(connection)
+
+        self.clearAndRepaint()
+
+
     def isConnectionSelected(self, connection):
         if self.selectedConnections.get(int(connection.getUniqueID()), False): return True
         else: return False
 
     def checkModifyConnection(self):
-        if len(self.selectedConnections) == 2: self.btnModifyConnection.setEnabled(True)
+        if len(self.selectedNodes) == 2 ^ len(self.selectedConnections) == 1: self.btnModifyConnection.setEnabled(True)
         else: self.btnModifyConnection.setEnabled(False)
 
     def modifyConnection(self):
@@ -452,16 +481,22 @@ class Ui_MainWindow(object):
         for x in self.nodes.keys():
             self.placeNodeGraphic(self.nodes[x])
 
+        for connectionID in self.connections:
+            connection = src.Network.network.connections[connectionID]
+            self.placeConnectionGraphic(connectionID, connection.connectionType, connection.node[0], connection.nodes[1])
+
          #TODO this may need to change later too (if it needs to be a dictionary instead)
 
-        for x in range(len(self.connections)):
-            connectionNodes = self.connections[x].getConnectionNodes()
-            source = connectionNodes[0]
-            dest = connectionNodes[1]
-            if source == None or dest == None:
-                self.deleteConnection(self.connections[x])
-            else:
-                self.placeConnectionGraphic(self.connections[x].getUniqueID(), self.connections[x].getConnectionType(), source, dest)
+        #TODO fix and test this.
+        #This code is to delete connections if one of their nodes is deleted.
+        # for x in range(len(self.connections)):
+        #     connectionNodes = self.connections[x].getConnectionNodes()
+        #     source = connectionNodes[0]
+        #     dest = connectionNodes[1]
+        #     if source == None or dest == None:
+        #         self.deleteConnection(self.connections[x])
+        #     else:
+        #         self.placeConnectionGraphic(self.connections[x].getUniqueID(), self.connections[x].getConnectionType(), source, dest)
 
         self.frameMain.repaint()
 
@@ -492,7 +527,7 @@ class Ui_MainWindow(object):
         self.lblNode.setObjectName(_fromUtf8(aNode.getUniqueID()))
         self.lblNode.show()
 
-    def placeConnectionGraphic(self, uniqueName, connectionType, firstNode, secondNode):
+    def placeConnectionGraphic(self, connectionID, connectionType, firstNode, secondNode):
 
         # connection will always be a pair of lines 1 horizontal and 1 vertical
 
@@ -512,7 +547,8 @@ class Ui_MainWindow(object):
         else:
             connectionColor = "green"
 
-        connectionID = str(uniqueName)
+        #TODO Remove
+        #connectionID = str(connectionID)
 
         if (x2 - x1) > 0:  # x direction from node 1 to node 2 is positive
             if (y2 - y1) > 0:  # y direction from node 1 to node 2 is positive
@@ -545,7 +581,7 @@ class Ui_MainWindow(object):
                     self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID)
                     self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID)
 
-    def drawHorizontalLine(self, xPos, yPos, lineLength, lineColor, connectionName):
+    def drawHorizontalLine(self, xPos, yPos, lineLength, lineColor, connectionID):
 
         self.linConnection = NetworkConnection(self.frameMain)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, lineLength, 6))
@@ -554,19 +590,20 @@ class Ui_MainWindow(object):
         self.linConnection.setFrameShadow(QtGui.QFrame.Plain)
         self.linConnection.setLineWidth(6)
         self.linConnection.setFrameShape(QtGui.QFrame.HLine)
-        self.linConnection.setObjectName(_fromUtf8(connectionName + "H"))
+        self.linConnection.connectionID = connectionID
+        self.linConnection.setObjectName(_fromUtf8(str(connectionID) + "H"))
         self.linConnection.lower()
         self.linConnection.show()
 
-    def drawVerticalLine(self, xPos, yPos, lineLength, lineColor, connectionName):
+    def drawVerticalLine(self, xPos, yPos, lineLength, lineColor, connectionID):
         self.linConnection = NetworkConnection(self.frameMain)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, 6, lineLength))
         self.linConnection.setStyleSheet(_fromUtf8("color:" + lineColor))
-
+        self.linConnection.connectionID = connectionID
         self.linConnection.setFrameShadow(QtGui.QFrame.Plain)
         self.linConnection.setLineWidth(6)
         self.linConnection.setFrameShape(QtGui.QFrame.VLine)
-        self.linConnection.setObjectName(_fromUtf8(connectionName + "V"))
+        self.linConnection.setObjectName(_fromUtf8(str(connectionID) + "V"))
         self.linConnection.lower()
         self.linConnection.show()
 
@@ -611,9 +648,9 @@ class NodeLabel(QtGui.QLabel):
         # TODO add Shift + Click for multiple selection
 
         if self.mainWindow.isNodeSelected(self.nodeObject):
-            self.mainWindow.selectedNodes.pop(int(self.nodeObject.getUniqueID()) , None)
+            self.mainWindow.selectedNodes.pop(self.nodeObject.getIDInt())
         else:
-            self.mainWindow.selectedNodes[int(self.nodeObject.getUniqueID())] = self.nodeObject
+            self.mainWindow.selectedNodes[self.nodeObject.getIDInt()] = self.nodeObject
 
         self.highlightSelected()
 
@@ -663,15 +700,47 @@ class NetworkFrame(QtGui.QFrame):
 
 
 class NetworkConnection(QtGui.QFrame):
-    myX = 0
-    myY = 0
-    myW = 0
-    myH = 0
-    connectionName = ""
+
+    def setMainWindow(self, mw):
+        self.MainWindow = mw
+
+    def getLatency(self):
+        #TODO make this actually correct
+        #Probably calculate from length and type
+        return 100
+
+    def getBandwidth(self):
+        #TODO make this actually correct
+        #Max bandwidth probably determined by type.
+        return 200
 
     def mousePressEvent(self, ev):
-        point = ev.pos()
-        posX = point.x() + self.myX
-        posY = point.y() + self.myY
+        print "Connection number", self.connectionID, "clicked"
+        # TODO add Shift + Click for multiple selection
 
-        print "connection clicked " + self.connectionName
+        if self.mainWindow.isConnectionSelected(self.connectionID):
+            self.mainWindow.selectedConnections.pop(self.connectionID)
+        else:
+            self.mainWindow.selectedConnections[self.connectionID] = self.connectionID
+
+        self.highlightSelected()
+
+        self.mainWindow.checkModifyNode()
+        self.mainWindow.checkModifyConnection()
+
+    def highlightSelected(self):
+        if self.mainWindow.isNodeSelected(self.nodeObject):
+            if self.nodeObject.getType() == "Host":
+                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/pc_hl.png")))
+            elif self.nodeObject.getType() == "Router":
+                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/router_hl.png")))
+            else:
+                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/switch_hl.png")))
+        else:
+            if self.nodeObject.getType() == "Host":
+                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/pc.png")))
+            elif self.nodeObject.getType() == "Router":
+                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/router.png")))
+            else:
+                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/switch.png")))
+
