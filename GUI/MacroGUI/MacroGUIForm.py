@@ -384,6 +384,9 @@ class Ui_MainWindow(object):
 
         src.Network.network.add_connection(node1.getIDInt(), node2.getIDInt(), simConnection)
 
+        print"Add Connection"
+        print src.Network.network.connections
+
         #Add GUI connection
         self.connections.append(simConnection.connection_id)
         self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, node1, node2)
@@ -438,9 +441,8 @@ class Ui_MainWindow(object):
 
         self.clearAndRepaint()
 
-
-    def isConnectionSelected(self, connection):
-        if self.selectedConnections.get(int(connection.getUniqueID()), False): return True
+    def isConnectionSelected(self, connectionID):
+        if self.selectedConnections.__contains__(connectionID): return True
         else: return False
 
     def checkModifyConnection(self):
@@ -553,53 +555,59 @@ class Ui_MainWindow(object):
         if (x2 - x1) > 0:  # x direction from node 1 to node 2 is positive
             if (y2 - y1) > 0:  # y direction from node 1 to node 2 is positive
                 if (x2 - x1) > (y2 - y1):  # line in x direction is longer than y
-                    self.drawHorizontalLine(x1, y1, (x2 - x1), connectionColor, connectionID)
-                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID)
+                    self.drawHorizontalLine(x1, y1, (x2 - x1), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID)
-                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID)
+                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID, firstNode, secondNode)
             else:  # y direction from node 1 to node 2 is negative
                 if (x2 - x1) > (y1 - y2):  # line in x direction is longer than y
-                    self.drawHorizontalLine(x1, y1, (x2 - x1 + 6), connectionColor, connectionID)
-                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID)
+                    self.drawHorizontalLine(x1, y1, (x2 - x1 + 6), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID)
-                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID)
+                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x1, y2, (x2 - x1), connectionColor, connectionID, firstNode, secondNode)
         else:  # x direction from node 1 to node 2 is negative
             if (y2 - y1) > 0:  # y direction from node 1 to node 2 is positive
                 if (x1 - x2) > (y2 - y1):  # line in x is longer than y
-                    self.drawHorizontalLine(x2, y1, (x1 - x2 + 6), connectionColor, connectionID)
-                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID)
+                    self.drawHorizontalLine(x2, y1, (x1 - x2 + 6), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x2, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID)
-                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID)
+                    self.drawVerticalLine(x1, y1, (y2 - y1), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID, firstNode, secondNode)
             else:  # y direction from node 1 to node 2 is negative
                 if (x1 - x2) > (y1 - y2):  # line in x is longer than y
-                    self.drawHorizontalLine(x2, y1, (x1 - x2), connectionColor, connectionID)
-                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID)
+                    self.drawHorizontalLine(x2, y1, (x1 - x2), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawVerticalLine(x2, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
                 else:  # line in y is longer than x
-                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID)
-                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID)
+                    self.drawVerticalLine(x1, y2, (y1 - y2), connectionColor, connectionID, firstNode, secondNode)
+                    self.drawHorizontalLine(x2, y2, (x1 - x2), connectionColor, connectionID, firstNode, secondNode)
 
-    def drawHorizontalLine(self, xPos, yPos, lineLength, lineColor, connectionID):
+    def drawHorizontalLine(self, xPos, yPos, lineLength, lineColor, connectionID, firstNode, secondNode):
 
         self.linConnection = NetworkConnection(self.frameMain)
+        self.linConnection.connectionID = connectionID
+        self.linConnection.firstNode = firstNode
+        self.linConnection.secondNode = secondNode
+        self.linConnection.setMainWindow(self)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, lineLength, 6))
         self.linConnection.setStyleSheet(_fromUtf8("color:" + lineColor))
-
         self.linConnection.setFrameShadow(QtGui.QFrame.Plain)
         self.linConnection.setLineWidth(6)
         self.linConnection.setFrameShape(QtGui.QFrame.HLine)
-        self.linConnection.connectionID = connectionID
         self.linConnection.setObjectName(_fromUtf8(str(connectionID) + "H"))
         self.linConnection.lower()
         self.linConnection.show()
 
-    def drawVerticalLine(self, xPos, yPos, lineLength, lineColor, connectionID):
+    def drawVerticalLine(self, xPos, yPos, lineLength, lineColor, connectionID, firstNode, secondNode):
+
         self.linConnection = NetworkConnection(self.frameMain)
+        self.linConnection.connectionID = connectionID
+        self.linConnection.firstNode = firstNode
+        self.linConnection.secondNode = secondNode
+        self.linConnection.setMainWindow(self)
         self.linConnection.setGeometry(QtCore.QRect(xPos, yPos, 6, lineLength))
         self.linConnection.setStyleSheet(_fromUtf8("color:" + lineColor))
-        self.linConnection.connectionID = connectionID
         self.linConnection.setFrameShadow(QtGui.QFrame.Plain)
         self.linConnection.setLineWidth(6)
         self.linConnection.setFrameShape(QtGui.QFrame.VLine)
@@ -644,7 +652,7 @@ class NodeLabel(QtGui.QLabel):
         print "double click event"
 
     def mousePressEvent(self, ev):
-
+        # TODO disable add/remove connection buttons at appropriate times.
         # TODO add Shift + Click for multiple selection
 
         if self.mainWindow.isNodeSelected(self.nodeObject):
@@ -702,7 +710,8 @@ class NetworkFrame(QtGui.QFrame):
 class NetworkConnection(QtGui.QFrame):
 
     def setMainWindow(self, mw):
-        self.MainWindow = mw
+        self.mainWindow = mw
+        print "main window set for connection", self.connectionID
 
     def getLatency(self):
         #TODO make this actually correct
@@ -717,11 +726,12 @@ class NetworkConnection(QtGui.QFrame):
     def mousePressEvent(self, ev):
         print "Connection number", self.connectionID, "clicked"
         # TODO add Shift + Click for multiple selection
+        # TODO disable add/remove connection buttons at appropriate times.
 
         if self.mainWindow.isConnectionSelected(self.connectionID):
-            self.mainWindow.selectedConnections.pop(self.connectionID)
+            self.mainWindow.selectedConnections.remove(self.connectionID)
         else:
-            self.mainWindow.selectedConnections[self.connectionID] = self.connectionID
+            self.mainWindow.selectedConnections.append(self.connectionID)
 
         self.highlightSelected()
 
@@ -729,18 +739,17 @@ class NetworkConnection(QtGui.QFrame):
         self.mainWindow.checkModifyConnection()
 
     def highlightSelected(self):
-        if self.mainWindow.isNodeSelected(self.nodeObject):
-            if self.nodeObject.getType() == "Host":
-                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/pc_hl.png")))
-            elif self.nodeObject.getType() == "Router":
-                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/router_hl.png")))
-            else:
-                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/switch_hl.png")))
+
+        print "NetworkConnection.highlightSelected()"
+        print src.Network.network.connections
+        if self.mainWindow.isConnectionSelected(self.connectionID):
+            self.setStyleSheet(_fromUtf8("color:" + "yellow"))
         else:
-            if self.nodeObject.getType() == "Host":
-                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/pc.png")))
-            elif self.nodeObject.getType() == "Router":
-                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/router.png")))
+            nodes =
+            if src.Network.network.c == "Coax":
+                self.setStyleSheet(_fromUtf8("color:" + "red"))
+            elif self.nodeObject.getType() == "Fiber":
+                self.setStyleSheet(_fromUtf8("color:" + "blue"))
             else:
-                self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/switch.png")))
+                self.setStyleSheet(_fromUtf8("color:" + "green"))
 

@@ -46,6 +46,9 @@ class Network:
         pair_id = self.get_node_pair_id(n1_id, n2_id)
         self.connections[pair_id] = connection
 
+    def get_connection(self, n1_id, n2_id):
+        return self.connections[self.get_node_pair_id(n1_id,n2_id)]
+
     def add_packet(self, packet):
         self.packets[packet.packet_id] = packet
 
