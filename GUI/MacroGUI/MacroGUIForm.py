@@ -484,7 +484,7 @@ class Ui_MainWindow(object):
             self.placeNodeGraphic(self.nodes[x])
 
         for connectionID in self.connections:
-            connection = src.Network.network.connections[connectionID]
+            connection = src.Network.network.getConnection[connectionID]
             self.placeConnectionGraphic(connectionID, connection.connectionType, connection.node[0], connection.nodes[1])
 
          #TODO this may need to change later too (if it needs to be a dictionary instead)
@@ -744,15 +744,23 @@ class NetworkConnection(QtGui.QFrame):
     def highlightSelected(self):
 
         print "NetworkConnection.highlightSelected()"
-        print src.Network.network.connections
+        print self.mainWindow.selectedConnections
+
+        vertical = self.parent().findChild(NetworkConnection, (_fromUtf8(str(self.connectionID) + "V")));
+        horizontal = self.parent().findChild(NetworkConnection, (_fromUtf8(str(self.connectionID) + "H")));
+
         if self.mainWindow.isConnectionSelected(self.connectionID):
-            self.setStyleSheet(_fromUtf8("color:" + "yellow"))
+            vertical.setStyleSheet(_fromUtf8("color:" + "yellow"))
+            horizontal.setStyleSheet(_fromUtf8("color:" + "yellow"))
         else:
             connection = src.Network.network.get_connection(self.firstNodeID, self.secondNodeID)
             if connection.connectionType == "Coax":
-                self.setStyleSheet(_fromUtf8("color:" + "blue"))
+                vertical.setStyleSheet(_fromUtf8("color:" + "blue"))
+                horizontal.setStyleSheet(_fromUtf8("color:" + "blue"))
             elif connection.connectionType == "Fiber":
-                self.setStyleSheet(_fromUtf8("color:" + "red"))
+                vertical.setStyleSheet(_fromUtf8("color:" + "red"))
+                horizontal.setStyleSheet(_fromUtf8("color:" + "red"))
             else:
-                self.setStyleSheet(_fromUtf8("color:" + "green"))
+                vertical.setStyleSheet(_fromUtf8("color:" + "green"))
+                horizontal.setStyleSheet(_fromUtf8("color:" + "green"))
 
