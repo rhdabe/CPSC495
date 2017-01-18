@@ -131,6 +131,7 @@ class Ui_MainWindow(object):
         self.btnDeleteNode = QtGui.QPushButton(self.dockNPContents)
         self.btnDeleteNode.setGeometry(QtCore.QRect(120, 170, 75, 23))
         self.btnDeleteNode.setObjectName(_fromUtf8("btnDeleteNode"))
+        self.btnDeleteNode.setEnabled(False)
         self.btnAddNode = QtGui.QPushButton(self.dockNPContents)
         self.btnAddNode.setGeometry(QtCore.QRect(30, 170, 75, 23))
         self.btnAddNode.setObjectName(_fromUtf8("btnAddNode"))
@@ -234,7 +235,7 @@ class Ui_MainWindow(object):
         # calling functions from buttons here
         QtCore.QObject.connect(self.cboConnectionType, QtCore.SIGNAL(_fromUtf8("activated(int)")), self.decideBandwidth)
         QtCore.QObject.connect(self.btnAddConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addConnection)
-        QtCore.QObject.connect(self.btnDeleteConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteConnection)
+        QtCore.QObject.connect(self.btnDeleteConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteSelectedConnections)
         QtCore.QObject.connect(self.btnModifyConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.modifyConnection)
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addNode)
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteSelectedNodes)
@@ -268,8 +269,11 @@ class Ui_MainWindow(object):
         self.lblConnectionType.setText(_translate("MainWindow", "Connection Type", None))
         self.lblConnectionBandwidth.setText(_translate("MainWindow", "Bandwidth", None))
         self.btnModifyConnection.setText(_translate("MainWindow", "Modify", None))
+        self.btnModifyConnection.setEnabled(False)
         self.btnAddConnection.setText(_translate("MainWindow", "Add", None))
+        self.btnAddConnection.setEnabled(False)
         self.btnDeleteConnection.setText(_translate("MainWindow", "Delete", None))
+        self.btnDeleteConnection.setEnabled(False)
         self.actionNew.setText(_translate("MainWindow", "New", None))
         # self.actionOpen.setText(_translate("MainWindow", "Open", None))
         # self.actionRecent.setText(_translate("MainWindow", "Recent", None))
@@ -343,6 +347,13 @@ class Ui_MainWindow(object):
     def checkModifyNode(self):
         if len(self.selectedNodes) == 1: self.btnModifyNode.setEnabled(True)
         else: self.btnModifyNode.setEnabled(False)
+
+    def checkAddNode(self):
+        #TODO finish this
+        pass
+    def checkDeleteNodes(self):
+        if len(self.selectedNodes) > 0: self.btnDeleteNode.setEnabled(True)
+        else: self.btnDeleteNode.setEnabled(False)
 
     def modifyNode(self):
         #Checking of whether node modification is allowed is handled by enabling/disabling btnModifyNode.
@@ -420,11 +431,32 @@ class Ui_MainWindow(object):
         # else:
         #     print "Must select 2 nodes before attempting to create a connection"
 
-    def deleteConnection(self):
-         #This gets called by the button press.
+    def deleteSelectedConnections(self):
+        #This gets called by the button press.
+        print "deleteSelectedConnections()"
+        print "connections:"
+        print self.connections
+        print "selectedConnections:"
+        print self.selectedConnections
+
         for connection in self.selectedConnections:
+            #remove GUI connection
             self.connections.remove(connection)
-            self.selectedConnections.remove(connection)
+            #remove simulation connection
+            del(src.Network.network.connections[connection])
+            #remove record of having this connection selected.
+            print "connections:"
+            print self.connections
+            print "selectedConnections:"
+            print self.selectedConnections
+
+        self.selectedConnections = []
+
+        print"done deleting now"
+        print "connections:"
+        print self.connections
+        print "selectedConnections:"
+        print self.selectedConnections
 
         self.clearAndRepaint()
 
@@ -433,8 +465,14 @@ class Ui_MainWindow(object):
         else: return False
 
     def checkModifyConnection(self):
-        if len(self.selectedNodes) == 2 ^ len(self.selectedConnections) == 1: self.btnModifyConnection.setEnabled(True)
+        if len(self.selectedConnections) == 1: self.btnModifyConnection.setEnabled(True)
         else: self.btnModifyConnection.setEnabled(False)
+    def checkAddConnection(self):
+        if len(self.selectedNodes) == 2: self.btnAddConnection.setEnabled(True)
+        else: self.btnAddConnection.setEnabled(False)
+    def checkDeleteConnections(self):
+        if len(self.selectedConnections) > 0: self.btnDeleteConnection.setEnabled(True)
+        else: self.btnDeleteConnection.setEnabled(False)
 
     def modifyConnection(self):
         #Checking of whether connection modification is allowed is handled by enabling/disabling btnModifyConnection.
@@ -652,7 +690,10 @@ class NodeLabel(QtGui.QLabel):
         self.highlightSelected()
 
         self.mainWindow.checkModifyNode()
+        self.mainWindow.checkDeleteNodes()
         self.mainWindow.checkModifyConnection()
+        self.mainWindow.checkAddConnection()
+
 
     def highlightSelected(self):
         if self.mainWindow.isNodeSelected(self.nodeObject):
@@ -720,10 +761,11 @@ class NetworkConnection(QtGui.QFrame):
         else:
             self.mainWindow.selectedConnections.append(self.nodeTuple)
 
-        self.highlightSelected()
+        print self.mainWindow.selectedConnections
 
-        self.mainWindow.checkModifyNode()
+        self.highlightSelected()
         self.mainWindow.checkModifyConnection()
+        self.mainWindow.checkDeleteConnections()
 
     def highlightSelected(self):
 
