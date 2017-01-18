@@ -432,32 +432,14 @@ class Ui_MainWindow(object):
         #     print "Must select 2 nodes before attempting to create a connection"
 
     def deleteSelectedConnections(self):
-        #This gets called by the button press.
-        print "deleteSelectedConnections()"
-        print "connections:"
-        print self.connections
-        print "selectedConnections:"
-        print self.selectedConnections
-
         for connection in self.selectedConnections:
             #remove GUI connection
             self.connections.remove(connection)
             #remove simulation connection
             del(src.Network.network.connections[connection])
-            #remove record of having this connection selected.
-            print "connections:"
-            print self.connections
-            print "selectedConnections:"
-            print self.selectedConnections
 
+        #Remove all selected connections.
         self.selectedConnections = []
-
-        print"done deleting now"
-        print "connections:"
-        print self.connections
-        print "selectedConnections:"
-        print self.selectedConnections
-
         self.clearAndRepaint()
 
     def isConnectionSelected(self, endNodesTuple):
