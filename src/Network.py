@@ -99,7 +99,7 @@ class Network:
         for node in self.nodes:
             graph_node = {}
             for connection in self.get_connected_nodes(node):
-                graph_node[connection["node"]] = connection["connection"].latency
+                graph_node[connection["node"]] = connection["connection"].get_latency()
             graph[node] = graph_node
         return graph
 
