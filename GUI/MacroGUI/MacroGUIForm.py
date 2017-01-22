@@ -329,12 +329,15 @@ class Ui_MainWindow(object):
     def deleteSelectedNodes(self):
 
         for node_id in self.selectedNodes.keys():
-            #remove node from nodes dictionary
+            # remove node from nodes dictionary
             self.nodes.pop(node_id)
-            #remove node from selectedNodes dictionary
+            # remove node from selectedNodes dictionary
             self.selectedNodes.pop(node_id)
-            #remove the corresponding network node
+            # remove the corresponding simulation node (incorporates deletion of simulation connection)
             src.Network.network.remove_node(node_id)
+            # remove any connections that involved this node.
+            for connection in self.connections:
+                if connection.__contains__(node_id): self.connections.remove(connection)
 
         #TODO recompute routing tables
 
@@ -360,12 +363,6 @@ class Ui_MainWindow(object):
         #(called from NodeLabel.mousePressedEvent())
         #This method should not be called other than by the pressing of said button.
         #TODO consider adding an exception in the case not exactly one node is selected when we get to here
-
-        # TODO Modify multiple selection process as follows:
-        # 3:
-        #   require use of Shift+Click to select more than one label.
-
-        selectedNode = self.selectedNodes.values()[0]
 
         #"Modify" GUI node (Remove old node and create new one with the new characteristics.  Necessary because
         #                 simulation nodes must be handled this way, and therefore so too must GUI nodes
@@ -458,21 +455,38 @@ class Ui_MainWindow(object):
 
     def modifyConnection(self):
         #Checking of whether connection modification is allowed is handled by enabling/disabling btnModifyConnection.
-        #(called from NodeLabel.mousePressedEvent())
+        #(called from NetworkConnection.mousePressedEvent())
         #This method should not be called other than by the pressing of said button.
-
-        # TODO Modify multiple selection process as follows:
-        # 3:
-        #   require use of Shift+Click to select more than one connection.
-
-        selectedNode = self.selectedNodes.values()[0]
-
-        #"Modify" GUI node (Remove old node and create new one with the new characteristics.  Necessary because
+        #"Modify" Connection (Remove old node and create new one with the new characteristics.  Necessary because
         #                 simulation nodes must be handled this way, and therefore so too must GUI nodes
         #                 otherwise their id's will no longer match.)
         #TODO This sort of nonsense is a good case for consolidating the two nodes into a single class. Consider it.
-        self.deleteSelectedNodes()
-        self.addNode()
+
+        print"modifyConnection()"
+        node_ids = self.selectedConnections[0]
+        # Keep track of whether the end nodes were selected or not so the same nodes are selected before and after.
+        selectedFlags = {}
+
+        # get nodes at either end of connection and add to selected nodes so that addConnection will work.
+
+        for node in node_ids:
+            if self.selectedNodes.__contains__(node): selectedFlags[node] = True
+            else: selectedFlags[node] = False
+
+            self.selectedNodes[node] = self.nodes[node]
+        print "Before:"
+        print src.Network.network.connections
+
+        self.deleteSelectedConnections()
+        self.addConnection()
+
+        print "After:"
+        print src.Network.network.connections
+
+        # remove the nodes from the selected nodes list to regain consistency with GUI.
+        for node in node_ids:
+            if selectedFlags[node]: self.selectedNodes[node] = self.nodes[node]
+            else: del(self.selectedNodes[node])
 
         self.clearAndRepaint()
 
@@ -487,6 +501,8 @@ class Ui_MainWindow(object):
         self.rebuildFrameMainGraphics()
 
     def rebuildFrameMainGraphics(self):
+
+        #TODO fix this so it replaces selected nodes/connections with their selected graphics.
         for x in self.nodes.keys():
             self.placeNodeGraphic(self.nodes[x])
 
@@ -509,12 +525,6 @@ class Ui_MainWindow(object):
         #         self.placeConnectionGraphic(self.connections[x].getUniqueID(), self.connections[x].getConnectionType(), source, dest)
 
         self.frameMain.repaint()
-
-
-    # difficult to implement. Worry about add/delete working properly
-    def modifyConnection(self):
-        print "modify connection"
-        # call repaint
 
     def placeNodeGraphic(self, aNode):
 
@@ -743,8 +753,6 @@ class NetworkConnection(QtGui.QFrame):
         else:
             self.mainWindow.selectedConnections.append(self.nodeTuple)
 
-        print self.mainWindow.selectedConnections
-
         self.highlightSelected()
         self.mainWindow.checkModifyConnection()
         self.mainWindow.checkDeleteConnections()
@@ -762,7 +770,7 @@ class NetworkConnection(QtGui.QFrame):
             if connection.connectionType == "Coax":
                 vertical.setStyleSheet(_fromUtf8("color:" + "blue"))
                 horizontal.setStyleSheet(_fromUtf8("color:" + "blue"))
-            elif connection.connectionType == "Fiber":
+            elif connection.connectionType == "Fibre":
                 vertical.setStyleSheet(_fromUtf8("color:" + "red"))
                 horizontal.setStyleSheet(_fromUtf8("color:" + "red"))
             else:
