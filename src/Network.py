@@ -95,6 +95,7 @@ class Network:
         return connected
 
     def get_as_graph(self):
+        print self.connections
         graph = {}
         for node in self.nodes:
             graph_node = {}

@@ -11,7 +11,7 @@ class Connection:
 
     def get_latency(self):
         #TODO some sort of calc based on type and length
-        return self.length
+        return self.connectionLength
 
     def other_node(self, node):
         if node == self.nodes[0]:

@@ -391,7 +391,7 @@ class Ui_MainWindow(object):
         simNodes = src.Network.network.nodes
         simConnection = SimulationConnection.Connection(simNodes[node1.getIDInt()], simNodes[node2.getIDInt()],
                                        self.cboConnectionType.currentText(),
-                                       self.txtConnectionLength.toPlainText())
+                                       int(self.txtConnectionLength.toPlainText()))
 
         src.Network.network.add_connection(node1.getIDInt(), node2.getIDInt(), simConnection)
 

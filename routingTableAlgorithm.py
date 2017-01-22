@@ -47,6 +47,7 @@ def dijkstra(graph, source_id, dest_id):
     return dijkstra2(graph, source_id, dest_id,[],{},{})
 
 def dijkstra2(graph, source_id, dest_id, visited=[], distances={}, parents={}):
+
     unvisited = [graph.keys()]
 
     if source_id == dest_id:
