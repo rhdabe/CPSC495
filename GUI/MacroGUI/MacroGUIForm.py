@@ -184,6 +184,7 @@ class Ui_MainWindow(object):
         self.dockSimulationControls.setObjectName(_fromUtf8("dockSimulationControls"))
         self.dockSCContents = QtGui.QWidget()
         self.dockSCContents.setObjectName(_fromUtf8("dockSCContents"))
+        #TODO this button is not necessary.  start_simulation() should be called immediately on startup.
         self.btnStart = QtGui.QPushButton(self.dockSCContents)
         self.btnStart.setGeometry(QtCore.QRect(0, 0, 50, 23))
         self.btnStart.setObjectName(_fromUtf8("btnStartButton"))
@@ -232,6 +233,7 @@ class Ui_MainWindow(object):
         self.cboNodeType.setCurrentIndex(0)
         self.cboConnectionType.setCurrentIndex(0)
 
+        #TODO: Pretty sure this could have been done up top... but whatever.
         # calling functions from buttons here
         QtCore.QObject.connect(self.cboConnectionType, QtCore.SIGNAL(_fromUtf8("activated(int)")), self.decideBandwidth)
         QtCore.QObject.connect(self.btnAddConnection, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addConnection)
@@ -660,6 +662,10 @@ class Ui_MainWindow(object):
 
     def openMsgWindow(self):  # Method to open button window
         self.MsgWindow = SendMessage_Window(self.MsgWindow)
+        QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
+                               self.MsgWindow.refreshDropdowns)
+        QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
+                               self.MsgWindow.refreshDropdowns)
 
 
 

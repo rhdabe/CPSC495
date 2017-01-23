@@ -30,9 +30,9 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
+#TODO this is literally just an object for holding setup methods... this should probably be fixed.
 class SendMessage_Window(object):
     def __init__(self, MainWindow):
-        #QtGui.QMainWindow.__init__(self)
         self.MainWindow = MainWindow
         self.setupUi()
 
@@ -114,6 +114,10 @@ class SendMessage_Window(object):
         self.toLabel.setText(_translate("MainWindow", "To:", None))
 
     def refreshDropdowns(self):
+        # TODO make this less annoying somehow: always resets to first element
+
+        # TODO probably makes more sense to add another dock widget to the main window for this function
+
         print "refreshDropdowns"
         # Clear the current dropdown information.
         self.toComboBox.clear()
