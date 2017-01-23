@@ -135,10 +135,12 @@ class SendMessage_Window(object):
         # Send message to the toNode.
         if self.TCPradioButton.isChecked():
             print str("TCP Message")
-            src.Network.network.create_messageTCP(self.toComboBox.currentText(), self.fromComboBox.currentText())
+            message = "TCP TO: " + str(self.toComboBox.currentText()) + "FROM: " + str(self.fromComboBox.currentText())
+            src.Network.network.create_messageTCP(self.toComboBox.currentText(), self.fromComboBox.currentText(), message)
         else:
             print str("UDP Message")
-            src.Network.network.create_messageUDP(self.toComboBox.currentText(), self.fromComboBox.currentText())
+            message = "UDP TO: " + str(self.toComboBox.currentText()) + "FROM: " + str(self.fromComboBox.currentText())
+            src.Network.network.create_messageUDP(self.toComboBox.currentText(), self.fromComboBox.currentText(), message)
 
         self.refreshDropdowns()
 
