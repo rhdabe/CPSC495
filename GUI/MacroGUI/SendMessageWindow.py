@@ -120,27 +120,28 @@ class SendMessage_Window(object):
         self.toComboBox.clearEditText()
         self.fromComboBox.clear()
         self.fromComboBox.clearEditText()
-        array = [1, 2, 3]
+        node_ids = src.Network.network.nodes.keys()
+        nodes = src.Network.network.nodes
         # Repopulate the dropdowns with updated info from the network.
-        for index in range(len(array)):
-            if isinstance(array[index], Host):
-                self.toComboBox.addItem(QtCore.QString(array[index]))
-                self.fromComboBox.addItem(QtCore.QString(array[index]))
+        for node_id in node_ids:
+            if isinstance(nodes[node_id], Host):
+                self.toComboBox.addItem(_fromUtf8(str(node_id)))
+                self.fromComboBox.addItem(_fromUtf8(str(node_id)))
 
     def send_message(self):
         print "send_message()"
         # Use this for sending the standard string to the network/nodes.
-        print str(self.toComboBox.currentText())
-        print str(self.fromComboBox.currentText())
+        print "To:", str(self.toComboBox.currentText())
+        print "From:", str(self.fromComboBox.currentText())
         # Send message to the toNode.
         if self.TCPradioButton.isChecked():
             print str("TCP Message")
             message = "TCP TO: " + str(self.toComboBox.currentText()) + "FROM: " + str(self.fromComboBox.currentText())
-            src.Network.network.create_messageTCP(self.toComboBox.currentText(), self.fromComboBox.currentText(), message)
+            src.Network.network.create_messageTCP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
         else:
             print str("UDP Message")
             message = "UDP TO: " + str(self.toComboBox.currentText()) + "FROM: " + str(self.fromComboBox.currentText())
-            src.Network.network.create_messageUDP(self.toComboBox.currentText(), self.fromComboBox.currentText(), message)
+            src.Network.network.create_messageUDP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
 
         self.refreshDropdowns()
 
