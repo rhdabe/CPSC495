@@ -33,7 +33,7 @@ class Packet:
         if self.connection is not None:
             self.connection.removeTraffic()
         self.connection.addTraffic()
-        self.set_timer(connection.latency)
+        self.set_timer(connection.get_latency())
 
     def set_timer(self, time):
         self.timer = time

@@ -208,6 +208,7 @@ class Ui_MainWindow(object):
         self.updateIntervalSpinner.setObjectName(_fromUtf8("spinnerUpdateInterval"))
         self.updateIntervalSpinner.setRange(0, 1000)
         self.updateIntervalSpinner.setSingleStep(100)
+        self.updateIntervalSpinner.setValue(500)
         self.dockSimulationControls.setWidget(self.dockSCContents)
 
 
@@ -297,8 +298,8 @@ class Ui_MainWindow(object):
         self.cboConnectionType.addItems(['Coax', 'Fibre', 'Custom'])
         self.cboNodeType.addItems(['Host', 'Router', 'Switch'])
 
-        self.txtConnectionBandwidth.setPlainText(`200`)
-        self.txtConnectionLength.setPlainText(`200`)
+        self.txtConnectionBandwidth.setPlainText(`2`)
+        self.txtConnectionLength.setPlainText(`2`)
 
     def decideBandwidth(self):
         if self.cboConnectionType.currentText() == "Custom":
@@ -646,14 +647,17 @@ class Ui_MainWindow(object):
 
     def stepSimulation(self):
         print "stepSimulation"
-        if self.simulation_started and self.simulation_paused: src.SimulationLoop.tick()
+
+        #and self.simulation_paused
+        if self.simulation_started : self.simulation_thread = src.SimulationLoop.tick()
 
     def playSimulation(self):
         print "playSimulation"
         self.simulation_paused = False
         #time.sleep() accepts time in seconds.  Spinner displays in ms.
-        interval = float(self.updateIntervalSpinner.value() / 1000)
-        self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval)
+        interval = float(self.updateIntervalSpinner.value()) / 1000.0
+        print "interval:", interval
+        self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval, numLoops=1)
 
     def pauseSimulation(self):
         print"pauseSimulation"

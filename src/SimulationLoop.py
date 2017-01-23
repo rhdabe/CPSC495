@@ -17,7 +17,7 @@ class SimThread(threading.Thread):
 
     #lock will be used to synchronize threads accessing the run flag.
 
-    def __init__(self, function, args=(), updateInterval=-1):
+    def __init__(self, function, args=(), updateInterval=-1, numLoops = -1):
         """Initializes a new SimThread which will run function(args) the_end times
 
         :type function function
@@ -29,6 +29,7 @@ class SimThread(threading.Thread):
         self.function = function
         self.args = args
         self.updateInterval = updateInterval
+        self.numLoops = numLoops
         self.lock = threading.RLock()
 
     def run(self):
@@ -39,11 +40,17 @@ class SimThread(threading.Thread):
         -1 (run forever)"""
 
         while self.access_run_flag():
-            if self.updateInterval > 0:
+            print "looping"
+            print"ui:", self.updateInterval, "numLoops:", self.numLoops
+            if self.updateInterval > 0 and self.numLoops != 0:
                 print "going to sleep for", self.updateInterval
                 time.sleep(self.updateInterval)
                 print "Okimasu!"
-            self.function(self.args)
+                self.function(self.args)
+            if self.numLoops == 0: self.end()
+            if self.numLoops > 0 : self.numLoops -= 1
+
+
 
     def access_run_flag(self, write=False, value=False):
         """Provides single read or write access to no more than one thread at a time.
@@ -77,13 +84,14 @@ def simStep(network):
     :type network Network"""
 
     #for testing purposes
+    print "simStep()"
     src.StepFunctions.table_step(network)
 
     # for packet in network.packets.values():
     #     if packet.timer > 0: packet.decrement_timer()
     #     else: packet.update_location(packet)
 
-def start_simulation(network, function=simStep, updateInterval=-1):
+def start_simulation(network, function=simStep, updateInterval=-1, numLoops = -1):
     """Starts a new SimThread to run the simulation with the given global network object, function, and number of steps.
 
     Defaults to use of the sim_step function, and to perpetual run mode.
@@ -102,8 +110,7 @@ def start_simulation(network, function=simStep, updateInterval=-1):
     for node in network.nodes.values():
         node.routing_table = tables[node.node_id]
 
-
-    thread = SimThread(function, args=network, updateInterval=updateInterval)
+    thread = SimThread(function, args=network, updateInterval=updateInterval, numLoops = numLoops)
     thread.start()
 
     return thread
@@ -111,7 +118,7 @@ def start_simulation(network, function=simStep, updateInterval=-1):
 def tick():
     #TODO docstring
     print "tick()"
-    start_simulation(src.Network.network, updateInterval=500)
+    return start_simulation(src.Network.network, updateInterval=500, numLoops = 1)
 
     '''
     Rhys's Notes - Rough Outline

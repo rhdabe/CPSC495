@@ -117,8 +117,6 @@ class SendMessage_Window(object):
         # TODO make this less annoying somehow: always resets to first element
 
         # TODO probably makes more sense to add another dock widget to the main window for this function
-
-        print "refreshDropdowns"
         # Clear the current dropdown information.
         self.toComboBox.clear()
         self.toComboBox.clearEditText()
@@ -133,18 +131,13 @@ class SendMessage_Window(object):
                 self.fromComboBox.addItem(_fromUtf8(str(node_id)))
 
     def send_message(self):
-        print "send_message()"
         # Use this for sending the standard string to the network/nodes.
-        print "To:", str(self.toComboBox.currentText())
-        print "From:", str(self.fromComboBox.currentText())
         # Send message to the toNode.
         if self.TCPradioButton.isChecked():
-            print str("TCP Message")
-            message = "TCP TO: " + str(self.toComboBox.currentText()) + "FROM: " + str(self.fromComboBox.currentText())
+            message = "TCP TO: " + str(self.toComboBox.currentText()) + " FROM: " + str(self.fromComboBox.currentText())
             src.Network.network.create_messageTCP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
         else:
-            print str("UDP Message")
-            message = "UDP TO: " + str(self.toComboBox.currentText()) + "FROM: " + str(self.fromComboBox.currentText())
+            message = "UDP TO: " + str(self.toComboBox.currentText()) + " FROM: " + str(self.fromComboBox.currentText())
             src.Network.network.create_messageUDP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
 
         self.refreshDropdowns()
