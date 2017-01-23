@@ -16,6 +16,7 @@ import src.Connection as SimulationConnection
 from Node import *
 import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
+from SendMessageWindow import MyPopup
 # import sip
 import time
 
@@ -659,7 +660,8 @@ class Ui_MainWindow(object):
         self.simulation_thread.end()
 
     def openMsgWindow(self):  # Method to open button window
-        SendMessage_Window(self.MsgWindow)
+        self.MsgWindow = SendMessage_Window(self.MsgWindow)
+
 
 
 class NodeLabel(QtGui.QLabel):
@@ -671,7 +673,6 @@ class NodeLabel(QtGui.QLabel):
         print "double click event"
 
     def mousePressEvent(self, ev):
-        # TODO disable add/remove connection buttons at appropriate times.
         # TODO add Shift + Click for multiple selection
 
         if self.mainWindow.isNodeSelected(self.nodeObject):
@@ -735,18 +736,17 @@ class NetworkConnection(QtGui.QFrame):
         self.mainWindow = mw
 
     def getLatency(self):
-        #TODO make this actually correct
+        #TODO make this actually correct should probably talk to simulation connection
         #Probably calculate from length and type
         return 100
 
     def getBandwidth(self):
-        #TODO make this actually correct
+        #TODO make this actually correct should probably talk to simulation connection
         #Max bandwidth probably determined by type.
         return 200
 
     def mousePressEvent(self, ev):
         # TODO add Shift + Click for multiple selection
-        # TODO disable add/remove connection buttons at appropriate times.
 
         if self.mainWindow.isConnectionSelected(self.nodeTuple):
             self.mainWindow.selectedConnections.remove(self.nodeTuple)
