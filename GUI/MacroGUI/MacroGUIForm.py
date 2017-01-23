@@ -16,7 +16,6 @@ import src.Connection as SimulationConnection
 from Node import *
 import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
-from SendMessageWindow import MyPopup
 # import sip
 import time
 
