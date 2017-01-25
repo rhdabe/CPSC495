@@ -648,15 +648,17 @@ class Ui_MainWindow(object):
     def stepSimulation(self):
         print "stepSimulation"
 
-        #and self.simulation_paused
-        if self.simulation_started : self.simulation_thread = src.SimulationLoop.tick()
+        #TODO and self.simulation_paused
+        if self.simulation_started :
+            interval = float(self.updateIntervalSpinner.value()) / 1000.0
+            self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval,
+                                                                     numLoops=1)
 
     def playSimulation(self):
         print "playSimulation"
         self.simulation_paused = False
         #time.sleep() accepts time in seconds.  Spinner displays in ms.
         interval = float(self.updateIntervalSpinner.value()) / 1000.0
-        print "interval:", interval
         self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval, numLoops=1)
 
     def pauseSimulation(self):
