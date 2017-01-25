@@ -1,10 +1,10 @@
-
-#TODO reintegrate Segment stuff once GUI works.
-#from Segments.Segment import *
-#from Segments.Header import *
-#from Segments import IPDatagram
-#from Segments import EthernetFrame
-import Packet
+from Segments.Segment import *
+from Segments.Header import *
+from Segments.IPDatagram import IPDatagram
+from Segments.EthernetFrame import EthernetFrame
+from Packet import Packet
+from Connection import Connection
+import Node
 
 class Network:
     def __init__(self):
@@ -34,18 +34,20 @@ class Network:
 
 
     def create_message(self, startID, endID, UDP_TCP_segment):
-
         ip_datagram = IPDatagram(Header(startID,endID,0), UDP_TCP_segment)
         eth_frame = EthernetFrame(Header(startID, endID, 0), ip_datagram)
-        network.add_packet(Packet(network.nodes[startID], eth_frame))
+        self.add_packet(Packet(self.nodes[startID], eth_frame))
 
         
     def add_connection(self, n1_id, n2_id, connection):
         """
         add a connection between two nodes (by id)
         """
-        pair_id = get_node_pair_id(n1_id, n2_id)
-        self.connections[pair_id] = {connection}
+        pair_id = self.get_node_pair_id(n1_id, n2_id)
+        self.connections[pair_id] = connection
+
+    def get_connection(self, n1_id, n2_id):
+        return self.connections[self.get_node_pair_id(n1_id,n2_id)]
 
     def add_packet(self, packet):
         self.packets[packet.packet_id] = packet
@@ -56,22 +58,26 @@ class Network:
         """
         try:
             del self.nodes[node_id]
-            for c_id, connection in self.connections.iteritems():
+            for c_id in self.connections.keys():
                 if node_id in c_id:
                     del self.connections[c_id]
             for p_id, packet in self.packets.iteritems():
                 if node_id == packet.current_node.node_id:
                     del self.packets[p_id]
+            # for node in self.nodes.values():
+            #     if not self.get_connected_nodes(node): self.remove_node(node.node_id)
             return True
         except:
             return False
+
+
 
     def remove_connection(self, n1_id, n2_id):
         """
         remove a connection by ids of nodes
         """
         try:
-            del self.connections[get_node_pair_id(n1_id, n2_id)]
+            del self.connections[self.get_node_pair_id(n1_id, n2_id)]
             return True
         except:
             return False
@@ -93,9 +99,13 @@ class Network:
         for node in self.nodes:
             graph_node = {}
             for connection in self.get_connected_nodes(node):
-                graph_node[connection["node"]] = connection["connection"].latency
+                graph_node[connection["node"]] = connection["connection"].get_latency()
             graph[node] = graph_node
         return graph
 
-
-network = Network()
+def network_init():
+    global network
+    network = Network()
+    Node.Node.static_id=0
+    Connection.static_id=0
+    Packet.static_packet_id = 0

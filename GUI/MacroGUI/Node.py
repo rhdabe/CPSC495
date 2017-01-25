@@ -9,10 +9,12 @@ __version__ = "1.0.0"
 class Node(object):
 
     counter = 0
+    static_id = 0
 
     def __init__(self, nodeType, x, y):
         Node.counter += 1
-        self.__Node_ID = self.uniqid()           # instance variable unique to each instance
+        self.__Node_ID = Node.static_id
+        Node.static_id+=1
         self.__NodeType = nodeType          # node type "PC", "Router", or "Switch"
         self.__X = x                        # position x value
         self.__Y = y                        # position y value
@@ -22,6 +24,7 @@ class Node(object):
     def __del__(self):
         Node.counter -= 1
 
+    #TODO This is a complete waste of time, as far as I can tell.
     # borrowed from http://gurukhalsa.me/2011/uniqid-in-python/
     def uniqid(more_entropy=False):
         m = time.time()
@@ -53,7 +56,14 @@ class Node(object):
     def getNetworkInfo(self):
         return self.__NetworkInfo
 
+    def modify(self, nodeType, x, y):
+        self.setLocation(x,y)
+        self.setType(nodeType)
+
     def getUniqueID(self):
+        return str(self.__Node_ID)
+
+    def getIDInt(self):
         return self.__Node_ID
 
     def toggleIsSelected(self):

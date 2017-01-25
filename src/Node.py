@@ -1,34 +1,29 @@
+from Segments.EthernetFrame import EthernetFrame
+from Segments.IPDatagram import IPDatagram
+from Segments.Segment import *
+import Network
 
-#TODO reintegrate segment stuff once GUI works.
-#from Segments.EthernetFrame import EthernetFrame
-#from Segments.IPDatagram import IPDatagram
-#from Segments.Segment import *
-from src.Network import Network
-
-class Node:
-    node_id = 0
+class Node(object):
+    static_id = 0
 
     def __init__(self):
 
-        self.node_id = Node.node_id
-        Node.node_id += 1
+        self.node_id = Node.static_id
+        Node.static_id += 1
         #stores {final destination, mininmun distance, next hop}
         #self.routing_table = {{}}
 
-    '''returns the packets who's current location is this node'''
+    '''returns the packets whose current location is this node'''
     def get_packets(self):
+        global network
+
         my_packets = []
-        for packet in Network.network.packets:
-            if packet.current_node == self.node_id:
+        for packet in network.packets:
+            if packet.current_node == self.static_id:
                 my_packets.append(packet)
         return my_packets
 
-
-
-
-
-
-class Switch (Node):
+class Switch(Node):
     def __init__(self):
         Node.__init__(self)
         self.routing_table = {}
@@ -41,13 +36,12 @@ class Switch (Node):
 
     def wrap_new_ethernet_frame(self, message, destination_id):
         #TODO the length of the header shouldn't be zero?
-        return EthernetFrame(Header(self.node_id, destination_id, 0), message)
+        return EthernetFrame(Header(self.static_id, destination_id, 0), message)
 
     def next_hop(self, dest_id):
-        return self.routing_table[dest_id]
+        return Network.network.nodes[self.routing_table[dest_id]]
 
-
-class Router (Switch):
+class Router(Switch):
     def __init__(self):
         Switch.__init__(self)
 
@@ -62,8 +56,7 @@ class Router (Switch):
         #TODO the length of the header shouldn't be zero?
         return IPDatagram(Header(source_id, destination_id, 0),message)
 
-
-class Host (Router):
+class Host(Router):
     def __init__(self):
         Router.__init__(self)
 
@@ -82,6 +75,6 @@ class Host (Router):
             return Segment(header, message)
 
     def send_message(self, dest_id, message_string):
-        Network.network.create_messageTCP(self.node_id, dest_id, message_string)
+        Network.network.create_messageTCP(self.static_id, dest_id, message_string)
 
 

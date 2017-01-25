@@ -8,27 +8,27 @@ from src.Network import *
 #            6:{3:4,4:4,5:5}}
 
 
-def routing_tables(network):
+def routingTables(network):
     tables = {}
-    if isinstance(network, Network):
+    #if isinstance(network, Network):
 
-        graph= network.get_as_graph()
+    graph= network.get_as_graph()
 
-        paths = shortest_paths(graph)
-        for node in graph.keys():
-            table = {}
+    paths = shortest_paths(graph)
+    for node in graph.keys():
+        table = {}
 
-            for path in paths:
-                if(path.__contains__(node)):
-                    index = path.index(node)
+        for path in paths:
+            if(path.__contains__(node)):
+                index = path.index(node)
 
-                    for i in range(0, len(path)):
-                        if i < index:
-                            table[path[i]] = path[index - 1]
-                        elif i > index:
-                            table[path[i]] = path[index + 1]
+                for i in range(0, len(path)):
+                    if i < index:
+                        table[path[i]] = path[index - 1]
+                    elif i > index:
+                        table[path[i]] = path[index + 1]
 
-                tables[node] = table
+            tables[node] = table
 
     return tables
 
@@ -47,6 +47,7 @@ def dijkstra(graph, source_id, dest_id):
     return dijkstra2(graph, source_id, dest_id,[],{},{})
 
 def dijkstra2(graph, source_id, dest_id, visited=[], distances={}, parents={}):
+
     unvisited = [graph.keys()]
 
     if source_id == dest_id:
@@ -91,7 +92,7 @@ def dijkstra2(graph, source_id, dest_id, visited=[], distances={}, parents={}):
 
 
 if __name__ == "__main__":
-    tables = routing_tables(network)
+    tables = routingTables(network)
     for node,table in zip(tables.keys(),tables.values()): print node, table
 
 
