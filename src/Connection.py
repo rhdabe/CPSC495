@@ -58,5 +58,17 @@ class Connection:
     def disconnect(self, interface):
         self.interfaces.remove(interface)
 
+    def reconnect(self, disconnect_int, connect_int):
+        self.disconnect(disconnect_int)
+        self.connect(connect_int)
+
     def transmit(self, interface, frame):
         self.other_interface(interface).setFrame(frame)
+
+    def step(self):
+        '''
+        If this connection is transmitting a packet, it will have a timer until delivery of that packet.
+        every step, then, we decrement this timer.
+
+        '''
+        pass

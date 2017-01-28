@@ -25,6 +25,17 @@ Dst IP, they reply by filling the Dst MAC field, and returning the ARP packet to
 
 Sending an ARP packet is the first step in sending a network datagram to an IP address whose MAC address is not known.
 
+General notes:
+
+I'm going to change what happens during a simulation step as follows.
+
+Connections will each have a variable which represents the binary state of the connection (on/off, 1/0).
+In a step, the sending interface will set the shared bit, and the recieving interface(s?) will read it.
+
+Most steps will involve this sort of work.  Occaisionally, a router or switch will have some higher level things to do.
+I will take raising or lowering a packet one level on the protocol stack to take one step, as well.
+
+
 '''
 class Node(object):
     #ID's will be used as addresses of one type or another
