@@ -3,30 +3,56 @@ from Segments.IPDatagram import IPDatagram
 from Segments.Segment import *
 import Network
 
+
+'''
+It is not Switches that have link-layer addresses, but their interfaces.  Thus, a single switch would properly
+have a different address for each interface, and so a switch should have a dictionary of interfaces, indexed by address
+(just an integer, an interface id, for example).  The link layer interface could be its own object, and could do the
+translation from link layer frames to physical bits and send them out on the connection.
+
+Routers have an ARP module, which holds an ARP table for translation between link layer (MAC) and network layer (IP)
+addresses within a given subnet. IP Address    MAC Address   TTL (when entry will be deleted, typically 20min)
+
+However, this table is initially empty.  It is populated via the exchange of ARP packets containing (at least):
+(Example query packet)
+Src IP  Src MAC  Dst IP  Dst MAC
+1       1        2       0 (Broadcast)
+
+Routers use these to ask all link layer interfaces in the subnet for a MAC address not known in the router's ARP table.
+Obviously, the only valid choice of MAC address to send the ARP packets to is the broadcast address (i.e. address to
+everyone).  Interfaces recieving these broadcasted ARP packets pass them up to their ARP modules.  If their IP is the
+Dst IP, they reply by filling the Dst MAC field, and returning the ARP packet to sender.
+
+Sending an ARP packet is the first step in sending a network datagram to an IP address whose MAC address is not known.
+
+'''
 class Node(object):
-    static_id = 0
+    #ID's will be used as addresses of one type or another
+    static_id = 1
 
     def __init__(self):
 
         self.node_id = Node.static_id
         Node.static_id += 1
-        #stores {final destination, mininmun distance, next hop}
-        #self.routing_table = {{}}
 
     '''returns the packets whose current location is this node'''
     def get_packets(self):
-        global network
+        network = Network.network
 
         my_packets = []
         for packet in network.packets:
-            if packet.current_node == self.static_id:
+            if packet.current_node == self.node_id:
                 my_packets.append(packet)
         return my_packets
 
 class Switch(Node):
+
+    static_MAC = 1
+
     def __init__(self):
         Node.__init__(self)
-        self.routing_table = {}
+        self.MAC_address = Switch.static_MAC
+        Switch.static_MAC += 1
 
     def get_ethernet_header(self, message):
         return message.frame_header
@@ -42,8 +68,13 @@ class Switch(Node):
         return Network.network.nodes[self.routing_table[dest_id]]
 
 class Router(Switch):
+
+    static_IP = 1
+
     def __init__(self):
         Switch.__init__(self)
+        self.IP_address = Router.static_IP
+        Router.static_IP += 1
 
     def get_ip_header(self, message):
         return message.ip_header

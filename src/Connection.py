@@ -1,6 +1,6 @@
 class Connection:
     static_id = 0;
-    def __init__(self, node1, node2, type, length):
+    def __init__(self, node1, node2, type = "Coax", length= 100):
         #Note that node1 and node2 are Node descendent instances, not node ids.
         self.connection_id = Connection.static_id
         Connection.static_id += 1
