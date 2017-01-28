@@ -47,12 +47,8 @@ class Node(object):
 
 class Switch(Node):
 
-    static_MAC = 1
-
     def __init__(self):
         Node.__init__(self)
-        self.MAC_address = Switch.static_MAC
-        Switch.static_MAC += 1
 
     def get_ethernet_header(self, message):
         return message.frame_header
@@ -64,11 +60,10 @@ class Switch(Node):
         #TODO the length of the header shouldn't be zero?
         return EthernetFrame(Header(self.static_id, destination_id, 0), message)
 
-    def next_hop(self, dest_id):
-        return Network.network.nodes[self.routing_table[dest_id]]
-
 class Router(Switch):
-
+    # TODO: all network entities should include a step() function which performs the necessary operations to move them
+    # ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
+    # TODO this is flat IP.  Consider making it hierarchical.
     static_IP = 1
 
     def __init__(self):
@@ -76,18 +71,55 @@ class Router(Switch):
         self.IP_address = Router.static_IP
         Router.static_IP += 1
 
+        #Routing table format: {final destination, next hop}
+        self.routing_table = {}
+
+
+        self.ARP_table = {}
+
+    def forward(self, packet):
+        '''
+        Look in routing table for which IP I should send this packet to next.
+        If I know the MAC address for that IP, just DOOIT!
+        If I do not, then broadcast ARP packet to get that MAC and add it to ARP table.
+        '''
+        dest_IP = packet.getDestIP()
+
+        if self.routing_table.get(dest_IP, False):
+            if self.IP_address != dest_IP:
+                next_IP = self.next_hop(dest_IP)
+                packet.set_connection(
+                    Network.network.connections[Network.network.get_node_pair_id(
+                        self.current_node.node_id, next_IP)])
+
+        pass
+
+    def next_hop(self, dest_IP):
+        #Returns IP next IP address according to this router's routing table.
+        return self.routing_table[dest_IP]
+
+    def ARP(self, IP_address):
+        '''
+        Broadcast ARP packet to get MAC address for the given IP address and add it to ARP table.
+        '''
+        pass
+
     def get_ip_header(self, message):
         return message.ip_header
 
     def get_ip_segment(self, message):
         return message.segment
 
-
-    def wrap_new_ip_frame(self, message, source_id, destination_id):
+    def wrap_new_IP_datagram(self, message, source_id, destination_id):
         #TODO the length of the header shouldn't be zero?
         return IPDatagram(Header(source_id, destination_id, 0),message)
 
+    def step(self):
+        # TODO implement this.  ARP table TTL's must be decremented.
+        pass
+
 class Host(Router):
+
     def __init__(self):
         Router.__init__(self)
 
