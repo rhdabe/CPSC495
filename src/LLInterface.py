@@ -12,6 +12,7 @@ class LLInterface(object):
         self.frame = None
         self.active = False
         self.recieving = False
+        self.recieved = False
         self.transmitting = False
         self.bit_string = ''
         self.next_bit = 0
@@ -48,14 +49,24 @@ class LLInterface(object):
             self.next_bit += 1
         else:
             #we're done transmitting
-            self.parse_bit_string()
+            self.transmitting = False
+            self.active = False
 
     def transmit(self, frame):
         self.frame = frame
         self.transmit()
 
     def read(self):
-        self.bit_string += self.connection.state
+        if self.connection.state != 'stop':
+            self.bit_string += self.connection.state
+        else:
+            self.recieved = True
+            self.recieving = False
+            self.active = False
+            self.parse_bit_string()
+
+    def parse_bit_string(self):
+        self.frame = self.connection.other_interface(self).frame
 
     def is_receiving(self):
         pass

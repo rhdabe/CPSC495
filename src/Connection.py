@@ -65,6 +65,3 @@ class Connection:
 
     def transmit(self, bit):
         self.state = bit
-
-    def finish_transmission(self, sender):
-        self.other_interface(sender).set_frame(sender.frame)
