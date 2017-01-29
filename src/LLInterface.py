@@ -66,6 +66,7 @@ class LLInterface(object):
             self.parse_bit_string()
 
     def parse_bit_string(self):
+        #TODO Maybe later I can make this actually legit.
         self.frame = self.connection.other_interface(self).frame
 
     def is_receiving(self):
