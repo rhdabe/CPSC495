@@ -2,6 +2,7 @@ from Segments.EthernetFrame import EthernetFrame
 from Segments.IPDatagram import IPDatagram
 from Segments.Segment import *
 import Network
+from LLInterface import LLInterface
 
 
 '''
@@ -33,7 +34,17 @@ Connections will each have a variable which represents the binary state of the c
 In a step, the sending interface will set the shared bit, and the recieving interface(s?) will read it.
 
 Most steps will involve this sort of work.  Occaisionally, a router or switch will have some higher level things to do.
-I will take raising or lowering a packet one level on the protocol stack to take one step, as well.
+I will take raising or lowering a packet one level on the protocol stack to take one step, as well... maybe
+
+In routers, packets elevated to the network layer by this Switch (inheritance) to this Router (elevate method?) will
+be added to the router's packet queue.  This could be done by having an elevate flag in the Switch for each of its
+interfaces.  If the flag is set, then the packet goes up to the network layer in this Router.  The Router step will
+check for elevate flags and if found move the associated packets to the queue all at once.
+
+Forwarding will also take place.  To preserve sanity, forwarder will occur BEFORE elevation within Router.step().
+Otherwise, a packet could be elevated and forwarded in a single step.
+
+
 
 
 '''
@@ -61,6 +72,65 @@ class Switch(Node):
     def __init__(self):
         Node.__init__(self)
 
+        # Switch table format: [dest_MAC : {"Interface" : #, "TTL" : #} }
+        self.switch_table = {}
+
+        # Interfaces format: {interface_id: LLInterface instance}
+        self.interfaces = {}
+
+        # Used to uniquely index the interfaces in the interfaces table.
+        self.num_interfaces =
+
+    def read_transmit_all_interfaces(self):
+
+       '''
+            This Switch processes all frames on interfaces with a set received flag.
+                If the dest_IP is not self.IP_address,
+            This Switch transmits on all interfaces with outgoing packets.
+                (In LLInterface: If a transmission is completed, free up this interface.)
+            This Switch reads on all interfaces with incoming packets.
+                (In LLInterface: One more bit is read on each interface from their connection
+                If a packet read is completed, set self.frame = the complete frame, and set received flag)
+
+       '''
+
+        for id, interface in self.interfaces.items():
+            if interface.active:
+                if interface.recieved():
+                    frame = interface.get_frame()
+                    self.process(frame, id)
+                #TODO I don't think I need to do anything if an interface has finished transmitting. It should just clear its frame and set itself as free/inactive.
+                if interface.is_recieving():
+                    interface.read()
+                elif interface.is_transmitting():
+                    interface.transmit()
+                # else the interface is inactive. Do nothing.
+
+    def new_interface(self):
+        self.interfaces[self.interfaces] = LLInterface()
+        self.num_interfaces += 1
+
+    def process_frame(self, frame, incoming_interface):
+        next_interface = self.next_interface()
+
+        if next_interface:
+            if next_interface != incoming_interface:
+                self.forward(frame, next_interface)
+            else:
+                # TODO filter this frame (drop it)
+
+    def forward(self, frame, next_interface):
+        self.interfaces[next_interface].send(frame)
+
+    def next_interface(self, dest_MAC):
+
+       next = self.switch_table.get(dest_MAC, False)
+
+       if next:
+         return next["Interface"]
+       else:
+            return False
+
     def get_ethernet_header(self, message):
         return message.frame_header
 
@@ -77,16 +147,20 @@ class Router(Switch):
     # TODO this is flat IP.  Consider making it hierarchical.
     static_IP = 1
 
+
     def __init__(self):
         Switch.__init__(self)
         self.IP_address = Router.static_IP
         Router.static_IP += 1
+        self.packet_queue = []
 
-        #Routing table format: {final destination, next hop}
+        #Routing table format: {final_dest_IP : next IP}
         self.routing_table = {}
 
-
+        #ARP table format: ["IP" : {"MAC" : #, "TTL" : #} }
         self.ARP_table = {}
+
+
 
     def forward(self, packet):
         '''
@@ -126,7 +200,26 @@ class Router(Switch):
         return IPDatagram(Header(source_id, destination_id, 0),message)
 
     def step(self):
-        # TODO implement this.  ARP table TTL's must be decremented.
+        # TODO implement this.
+        '''
+        ARP table TTL's must be decremented, and expired entries removed.
+
+        Packet processing must be advanced. (In this order!)
+
+            This Switch processes all frames on interfaces with a set received flag.
+                If the dest_IP is not self.IP_address,
+            This Switch transmits on all interfaces with outgoing packets.
+                (In LLInterface: If a transmission is completed, free up this interface.)
+            This Switch reads on all interfaces with incoming packets.
+                (In LLInterface: One more bit is read on each interface from their connection
+                If a packet read is completed, set self.frame = the complete frame, and set received flag)
+
+            Forward a packet in the queue.
+                wrap it in a link layer frame and give it to this Switch.
+            Elevate packets from this Switch (elevate())
+
+
+        '''
         pass
 
 class Host(Router):
