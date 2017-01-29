@@ -68,6 +68,7 @@ class Node(object):
         return my_packets
 
 class Switch(Node):
+    DEFAULT_TTL = 100
 
     def __init__(self):
         Node.__init__(self)
@@ -79,20 +80,22 @@ class Switch(Node):
         self.interfaces = {}
 
         # Used to uniquely index the interfaces in the interfaces table.
-        self.num_interfaces =
+        self.num_interfaces = 0
 
     def read_transmit_all_interfaces(self):
 
-       '''
-            This Switch processes all frames on interfaces with a set received flag.
-                If the dest_IP is not self.IP_address,
-            This Switch transmits on all interfaces with outgoing packets.
-                (In LLInterface: If a transmission is completed, free up this interface.)
-            This Switch reads on all interfaces with incoming packets.
-                (In LLInterface: One more bit is read on each interface from their connection
-                If a packet read is completed, set self.frame = the complete frame, and set received flag)
+        '''
+             Switch processing should occur in this order:
 
-       '''
+             This Switch processes all frames on interfaces with a set received flag.
+                 Filter frames, or forward them on to their next interface.
+             This Switch transmits on all interfaces with outgoing packets.
+                 (In LLInterface: If a transmission is completed, free up this interface.)
+             This Switch reads on all interfaces with incoming packets.
+                 (In LLInterface: One more bit is read on each interface from their connection
+                 If a packet read is completed, set self.frame = the complete frame, and set received flag)
+
+        '''
 
         for id, interface in self.interfaces.items():
             if interface.active:
@@ -111,16 +114,31 @@ class Switch(Node):
         self.num_interfaces += 1
 
     def process_frame(self, frame, incoming_interface):
+
+        # Add/refresh entry in switch table
+        self.switch_table[frame.dest_MAC] = {'Interface' : incoming_interface, 'TTL' : Switch.DEFAULT_TTL}
+
+        # Determine the next interface this frame would go on.
         next_interface = self.next_interface()
 
+        # If I know where this frame should go next:
         if next_interface:
             if next_interface != incoming_interface:
                 self.forward(frame, next_interface)
-            else:
-                # TODO filter this frame (drop it)
+            # else: ignore the frame.
+        else:
+            # If I don't know where to send it, send it to everyone.
+            self.broadcast(frame)
 
     def forward(self, frame, next_interface):
         self.interfaces[next_interface].send(frame)
+
+    def broadcast(self, frame):
+        # TODO Don't know if this is good enough...
+        for interface in self.interfaces.values():
+            if not interface.active:
+                interface.send(frame)
+
 
     def next_interface(self, dest_MAC):
 

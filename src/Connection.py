@@ -19,6 +19,7 @@ class Connection:
         self.connectionType = type
         self.connectionLength = length
         self.trafficCount = 0
+        self.state = 0
 
 
     def get_latency(self):
@@ -62,13 +63,8 @@ class Connection:
         self.disconnect(disconnect_int)
         self.connect(connect_int)
 
-    def transmit(self, interface, frame):
-        self.other_interface(interface).setFrame(frame)
+    def transmit(self, bit):
+        self.state = bit
 
-    def step(self):
-        '''
-        If this connection is transmitting a packet, it will have a timer until delivery of that packet.
-        every step, then, we decrement this timer.
-
-        '''
-        pass
+    def finish_transmission(self, sender):
+        self.other_interface(sender).set_frame(sender.frame)
