@@ -123,14 +123,14 @@ class Switch(Node):
         self.num_interfaces += 1
 
     def process_frame(self, frame, incoming_interface_id):
-        print "processing frame from", frame.src_MAC, "to", frame.dest_MAC, "inbound on interface", incoming_interface_id,\
+        print "processing frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC(), "inbound on interface", incoming_interface_id,\
             "with MAC", self.interfaces[incoming_interface_id].MAC_address
 
         # Add/refresh entry in switch table for src_MAC
-        self.switch_table[frame.src_MAC] = {'Interface' : incoming_interface_id, 'TTL' : Switch.DEFAULT_TTL}
+        self.switch_table[frame.get_src_MAC()] = {'Interface' : incoming_interface_id, 'TTL' : Switch.DEFAULT_TTL}
 
         # Determine the next interface this frame would go on.
-        next_interface = self.next_interface(frame.dest_MAC)
+        next_interface = self.next_interface(frame.get_dest_MAC())
 
         # If I know where this frame should go next:
         if isinstance(next_interface, (int, long)):
@@ -143,14 +143,14 @@ class Switch(Node):
             self.broadcast(frame)
 
     def forward(self, frame, next_interface_id):
-        print "forwarding frame from", frame.src_MAC, "to", frame.dest_MAC, "on interface", next_interface_id,\
+        print "forwarding frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC(), "on interface", next_interface_id,\
             "with MAC", self.interfaces[next_interface_id].MAC_address
         if not self.interfaces[next_interface_id].active:
             #TODO not sure this is good enough.
             self.interfaces[next_interface_id].send(frame)
 
     def broadcast(self, frame):
-        print "broadcasting frame from", frame.src_MAC, "to", frame.dest_MAC
+        print "broadcasting frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC()
         # TODO Don't know if this is good enough...
         for interface in self.interfaces.values():
             if not interface.active:

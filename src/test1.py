@@ -4,6 +4,7 @@ import sys
 from PyQt4.Qt import *
 from Node import *
 from Connection import *
+from RSegments.EthernetFrame import *
 
 
 class Frame:
@@ -33,8 +34,8 @@ int3 = s1.interfaces[1]
 
 connection.connect2(int1, int2)
 
-frame = Frame(3, 2, "This is a frame?")
-frame.bit_string = "01010100011010000110100101110011001000000110100101110011001000000110000100100000011001100111001001100001011011010110010100111111"
+frame = EthernetFrame(EthernetHeader(3,2), "01010100011010000110100101110011001000000110100101110011001000000110000100100000011001100111001001100001011011010110010100111111")
+#ascii for This is a frame?
 
 
 #  Now we're gonna pretend int 1 just received the frame to see if s1 will broadcast it correctly.
