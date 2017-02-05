@@ -43,11 +43,13 @@ int3.received = True
 int3.frame = frame
 
 while int1.active or int3.active:
-    s1.read_transmit_all_interfaces()
-    s2.read_transmit_all_interfaces()
+    s1.transmit_all_interfaces()
+    s2.transmit_all_interfaces()
+    s1.read_all_interfaces()
+    s2.read_all_interfaces()
 
 print "sent", int1.bit_string
-print "got", int2.bit_string
+print "got ", int2.bit_string
 
 
 

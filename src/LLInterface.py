@@ -36,6 +36,7 @@ class LLInterface(object):
         # TODO This will be fixed eventually (below)
         self.bit_string = frame.bit_string
         self.connection.wake_up(self)
+        self.send_bit()
 
     def send_bit(self):
 

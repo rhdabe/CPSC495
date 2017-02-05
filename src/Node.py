@@ -82,7 +82,6 @@ class Switch(Node):
         # Used to uniquely index the interfaces in the interfaces table.
         self.num_interfaces = 0
 
-    def read_transmit_all_interfaces(self):
         # TODO This will not work.  Must transmit from all switches first, and then read from all switches.  Two passes.
         '''
              Switch processing should occur in this order:
@@ -97,6 +96,16 @@ class Switch(Node):
 
         '''
 
+
+
+    def transmit_all_interfaces(self):
+        for id, interface in self.interfaces.items():
+            if interface.active and interface.transmitting:
+                print "sending on interface", id, "with MAC", self.interfaces[id].MAC_address
+                interface.send_bit()
+                # else the interface is inactive. Do nothing.
+
+    def read_all_interfaces(self):
         for id, interface in self.interfaces.items():
             if interface.active:
                 if interface.received:
@@ -106,9 +115,8 @@ class Switch(Node):
                 if interface.receiving:
                     print "reading on interface", id, "with MAC", interface.MAC_address
                     interface.read()
-                elif interface.transmitting:
-                    interface.send_bit()
                 # else the interface is inactive. Do nothing.
+
 
     def new_interface(self):
         self.interfaces[self.num_interfaces] = LLInterface()
