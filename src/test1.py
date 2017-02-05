@@ -43,7 +43,7 @@ int3.active = True
 int3.received = True
 int3.frame = frame
 
-while int1.active or int3.active:
+while int1.is_active() or int3.is_active():
     s1.transmit_all_interfaces()
     s2.transmit_all_interfaces()
     s1.read_all_interfaces()

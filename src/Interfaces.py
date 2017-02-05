@@ -1,4 +1,4 @@
-
+from NQueue import NQueue
 class LLInterface(object):
     # TODO apparently switch interfaces can send and receive at the same time... maybe figure that out later.
 
@@ -6,16 +6,19 @@ class LLInterface(object):
     static_MAC = 1
 
     def __init__(self):
+        self.output_queue = NQueue()
         self.MAC_address = LLInterface.static_MAC
         LLInterface.static_MAC += 1
         self.connection = None  # points to current connection object
         self.frame = None  # points to current frame to be transmitted or that has been received.
-        self.active = False  # this interface has some business that needs attending to.
         self.receiving = False  # currently receiving bit string to be parsed into self.frame
         self.received = False  # a frame has been received.
         self.transmitting = False  # currently transmitting self.frame
         self.bit_string = ''  # will hold bit string to be parsed if receiving, or to be transmitted if transmitting
         self.next_bit = 0  # index of next bit to be transmitted from self.bit_string
+
+    def is_transmitting(self):
+        return self.transmitting or not self.output_queue.isEmpty()
 
     def connect(self, connection):
         self.connection = connection
@@ -28,18 +31,27 @@ class LLInterface(object):
     def set_frame(self, frame):
         self.frame = frame
 
+    def transmit(self):
+        if self.transmitting:
+            self.send_bit()
+        elif not self.output_queue.isEmpty():
+            self.send(self.output_queue.deque())
+
     def send(self, frame):
-        print "starting frame transmission"
-        self.transmitting = True
-        self.active = True
-        self.frame = frame
-        # TODO This will be fixed eventually (below)
-        self.bit_string = frame.get_bit_string()
-        self.connection.wake_up(self)
-        self.send_bit()
+        if self.transmitting:
+            print "switch adding frame to output queue"
+            self.output_queue.enqueue(frame)
+        else:
+            print "starting frame transmission"
+            self.transmitting = True
+            self.active = True
+            self.frame = frame
+            # TODO This will be fixed eventually (below)
+            self.bit_string = frame.get_bit_string()
+            self.connection.wake_up(self)
+            self.send_bit()
 
     def send_bit(self):
-
         if len(self.bit_string) > self.next_bit:
             print "sending bit", self.bit_string[self.next_bit]
             self.connection.transmit(self.bit_string[self.next_bit])
@@ -48,8 +60,8 @@ class LLInterface(object):
             print "no more bits to send"
             #we're done transmitting
             self.transmitting = False
-            self.active = False
             self.connection.shut_down(self)
+
 
     def parse_bit_string(self):
         #TODO: This doesn't really parse anything right now.  Maybe do later.
@@ -65,16 +77,18 @@ class LLInterface(object):
         self.frame = self.connection.other_interface(self).frame
 
     def is_receiving(self):
-        pass
+        return self.receiving
 
     def is_transmitting(self):
-        pass
+        return self.transmitting or not self.output_queue.isEmpty()
 
-    def received(self):
-        pass
+    def has_received(self):
+        return self.received
+
+    def is_active(self):
+        return self.transmitting or self.receiving or self.received or not self.output_queue.isEmpty()
 
     def get_frame(self):
-        self.active = False
         self.received = False
         frame = self.frame
         self.frame = None
@@ -89,3 +103,13 @@ class LLInterface(object):
         print"I'm MAC", self.MAC_address, "and I'm asleep!"
         self.active = False
         self.receiving = False
+
+class NLInterface (LLInterface):
+
+    static_IP = 1
+
+    def __init__(self):
+        LLInterface.__init__()
+        self.IP_address = NLInterface.static_IP
+        NLInterface.static_IP += 1
+        self.input_queue = NQueue()
