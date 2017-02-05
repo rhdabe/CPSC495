@@ -3,6 +3,7 @@ from Segments.IPDatagram import IPDatagram
 from Segments.Segment import *
 import Network
 from LLInterface import LLInterface
+from Queue import Queue
 
 
 '''
@@ -95,9 +96,6 @@ class Switch(Node):
                  If a packet read is completed, set self.frame = the complete frame, and set received flag)
 
         '''
-
-
-
     def transmit_all_interfaces(self):
         for id, interface in self.interfaces.items():
             if interface.active and interface.transmitting:
@@ -136,24 +134,24 @@ class Switch(Node):
         if isinstance(next_interface, (int, long)):
             print"next_interface", next_interface, "incoming_interface", incoming_interface_id
             if next_interface != incoming_interface_id:
-                self.forward(frame, next_interface)
+                self.forward_LL_frame(frame, next_interface)
             # else: ignore the frame.
         else:
             # If I don't know where to send it, send it to everyone.
-            self.broadcast(frame)
+            self.broadcast(frame, incoming_interface_id)
 
-    def forward(self, frame, next_interface_id):
+    def forward_LL_frame(self, frame, next_interface_id):
         print "forwarding frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC(), "on interface", next_interface_id,\
             "with MAC", self.interfaces[next_interface_id].MAC_address
         if not self.interfaces[next_interface_id].active:
             #TODO not sure this is good enough.
             self.interfaces[next_interface_id].send(frame)
 
-    def broadcast(self, frame):
+    def broadcast(self, frame, incoming_id):
         print "broadcasting frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC()
         # TODO Don't know if this is good enough...
-        for interface in self.interfaces.values():
-            if not interface.active:
+        for id,interface in self.interfaces.iteritems():
+            if not interface.active and not id == incoming_id:
                 interface.send(frame)
 
 
@@ -182,13 +180,15 @@ class Router(Switch):
     # ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
     # TODO this is flat IP.  Consider making it hierarchical.
     static_IP = 1
-
+    ARP_IP = 0
+    ARP_payload = '0'
 
     def __init__(self):
         Switch.__init__(self)
         self.IP_address = Router.static_IP
         Router.static_IP += 1
-        self.packet_queue = []
+        self.input_queues = {}
+        self.output_queues = {}
 
         #Routing table format: {final_dest_IP : next IP}
         self.routing_table = {}
@@ -196,21 +196,61 @@ class Router(Switch):
         #ARP table format: ["IP" : {"MAC" : #, "TTL" : #} }
         self.ARP_table = {}
 
+    def new_interface(self):
+        # TODO for now use infinite queues.  Later will set queue size.  This type of queue may not work (it blocks)
+        # Each link layer interface in this Router has an associated input queue, and output queue.
+        self.interfaces[self.num_interfaces] = LLInterface()
+        self.input_queues[self.num_interfaces] = Queue()
+        self.output_queues[self.num_interfaces] = Queue()
+        self.num_interfaces += 1
+
+    def process_input_queues(self):
+        #TODO THIS NEXT
+        for id, queue in self.input_queues.iteritems():
 
 
-    def forward(self, packet):
+    def process_output_queues(self):
+        #TODO THIS NEXT
+
+    def transmit_all_interfaces(self):
+        # TODO This may only be needed for testing purposes.  Maybe remove
+        # Over-ridden from Switch to include input and output queues.
+        for id, interface in self.interfaces.items():
+            if interface.active and interface.transmitting:
+                print "Router IP", self.IP_address, "sending on interface", id, "with MAC", \
+                    self.interfaces[id].MAC_address
+                interface.send_bit()
+                # else the interface is inactive. Do nothing.
+
+    def read_all_interfaces(self):
+        # TODO This may only be needed for testing purposes.  Maybe remove
+        # Over-ridden from Switch to include input and output queues.
+        for id, interface in self.interfaces.items():
+            if interface.active:
+                if interface.received:
+                    frame = interface.get_frame()
+                    self.process_frame(frame, id)
+                #TODO I don't think I need to do anything if an interface has finished transmitting. It should just clear its frame and set itself as free/inactive.
+                if interface.receiving:
+                    print "Router IP", self.IP_address, "reading on interface", id, "with MAC",\
+                        interface.MAC_address
+                    interface.read()
+                # else the interface is inactive. Do nothing.
+
+
+    def forward_IP_datagram(self, datagram):
         '''
         Look in routing table for which IP I should send this packet to next.
         If I know the MAC address for that IP, just DOOIT!
         If I do not, then broadcast ARP packet to get that MAC and add it to ARP table.
         '''
 
-        dest_IP = packet.getDestIP()
+        dest_IP = datagram.get_dest_IP()
 
-        if self.routing_table.get(dest_IP, False):
+        if isinstance(self.routing_table.get(dest_IP, False), (int, long)):
             if self.IP_address != dest_IP:
                 next_IP = self.next_hop(dest_IP)
-                packet.set_connection(
+                datagram.set_connection(
                     Network.network.connections[Network.network.get_node_pair_id(
                         self.current_node.node_id, next_IP)])
             else:
@@ -221,8 +261,30 @@ class Router(Switch):
             pass
             #TODO do the ARP thing!
 
+    def elevate_frame(self, frame):
+        self.process_datagram(frame.IP_datagram)
+
+    def process_datagram(self, datagram, incoming_interface_id):
+        # Packets could be intended for this router, and not a host, example ARP packets.
+        # If the datagram is destined for some other IP
+        if not datagram.get_dest_IP() == self.IP_address:
+            # TODO Really, this shouldn't happen.  The switch level should move this along on it's own unless
+            # TODO the packet required higher level processing for some reason.  Yet to be implemented
+            self.forward_IP_datagram(datagram)
+        else:
+            if self.is_ARP_packet(datagram):
+                self.process_ARP_packet(datagram)
+
+    def is_ARP_packet(self, datagram):
+        return datagram.header.dest_IP == Router.ARP_IP and datagram.get_payload_bits() == Router.ARP_payload
+
+    def process_ARP_packet(self, datagram):
+        datagram.dest_IP = datagram.get_src_IP()
+        datagram.src_IP = self.IP_address
+
+
     def next_hop(self, dest_IP):
-        #Returns IP next IP address according to this router's routing table.
+        # Returns next IP address according to this router's routing table.
         return self.routing_table[dest_IP]
 
     def ARP(self, IP_address):
