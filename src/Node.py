@@ -73,7 +73,7 @@ class Switch(Node):
     def __init__(self):
         Node.__init__(self)
 
-        # Switch table format: [dest_MAC : {"Interface" : #, "TTL" : #} }
+        # Switch table format: [dest_MAC : {"Interface" : id#, "TTL" : #} }
         self.switch_table = {}
 
         # Interfaces format: {interface_id: LLInterface instance}
@@ -83,7 +83,7 @@ class Switch(Node):
         self.num_interfaces = 0
 
     def read_transmit_all_interfaces(self):
-
+        # TODO This will not work.  Must transmit from all switches first, and then read from all switches.  Two passes.
         '''
              Switch processing should occur in this order:
 
@@ -99,41 +99,50 @@ class Switch(Node):
 
         for id, interface in self.interfaces.items():
             if interface.active:
-                if interface.recieved():
+                if interface.received:
                     frame = interface.get_frame()
-                    self.process(frame, id)
+                    self.process_frame(frame, id)
                 #TODO I don't think I need to do anything if an interface has finished transmitting. It should just clear its frame and set itself as free/inactive.
-                if interface.is_recieving():
+                if interface.receiving:
+                    print "reading on interface", id, "with MAC", interface.MAC_address
                     interface.read()
-                elif interface.is_transmitting():
-                    interface.transmit()
+                elif interface.transmitting:
+                    interface.send_bit()
                 # else the interface is inactive. Do nothing.
 
     def new_interface(self):
-        self.interfaces[self.interfaces] = LLInterface()
+        self.interfaces[self.num_interfaces] = LLInterface()
         self.num_interfaces += 1
 
-    def process_frame(self, frame, incoming_interface):
+    def process_frame(self, frame, incoming_interface_id):
+        print "processing frame from", frame.src_MAC, "to", frame.dest_MAC, "inbound on interface", incoming_interface_id,\
+            "with MAC", self.interfaces[incoming_interface_id].MAC_address
 
-        # Add/refresh entry in switch table
-        self.switch_table[frame.dest_MAC] = {'Interface' : incoming_interface, 'TTL' : Switch.DEFAULT_TTL}
+        # Add/refresh entry in switch table for src_MAC
+        self.switch_table[frame.src_MAC] = {'Interface' : incoming_interface_id, 'TTL' : Switch.DEFAULT_TTL}
 
         # Determine the next interface this frame would go on.
-        next_interface = self.next_interface()
+        next_interface = self.next_interface(frame.dest_MAC)
 
         # If I know where this frame should go next:
-        if next_interface:
-            if next_interface != incoming_interface:
+        if isinstance(next_interface, (int, long)):
+            print"next_interface", next_interface, "incoming_interface", incoming_interface_id
+            if next_interface != incoming_interface_id:
                 self.forward(frame, next_interface)
             # else: ignore the frame.
         else:
             # If I don't know where to send it, send it to everyone.
             self.broadcast(frame)
 
-    def forward(self, frame, next_interface):
-        self.interfaces[next_interface].send(frame)
+    def forward(self, frame, next_interface_id):
+        print "forwarding frame from", frame.src_MAC, "to", frame.dest_MAC, "on interface", next_interface_id,\
+            "with MAC", self.interfaces[next_interface_id].MAC_address
+        if not self.interfaces[next_interface_id].active:
+            #TODO not sure this is good enough.
+            self.interfaces[next_interface_id].send(frame)
 
     def broadcast(self, frame):
+        print "broadcasting frame from", frame.src_MAC, "to", frame.dest_MAC
         # TODO Don't know if this is good enough...
         for interface in self.interfaces.values():
             if not interface.active:
@@ -141,12 +150,13 @@ class Switch(Node):
 
 
     def next_interface(self, dest_MAC):
+        # If the switch table contains the next interface for dest_MAC, return its id, else return False.
+        next_id = self.switch_table.get(dest_MAC, False)
+        print "next_interface for", dest_MAC, "is", next_id
 
-       next = self.switch_table.get(dest_MAC, False)
-
-       if next:
-         return next["Interface"]
-       else:
+        if next_id:
+            return next_id["Interface"]
+        else:
             return False
 
     def get_ethernet_header(self, message):
@@ -186,6 +196,7 @@ class Router(Switch):
         If I know the MAC address for that IP, just DOOIT!
         If I do not, then broadcast ARP packet to get that MAC and add it to ARP table.
         '''
+
         dest_IP = packet.getDestIP()
 
         if self.routing_table.get(dest_IP, False):
@@ -194,8 +205,13 @@ class Router(Switch):
                 packet.set_connection(
                     Network.network.connections[Network.network.get_node_pair_id(
                         self.current_node.node_id, next_IP)])
-
-        pass
+            else:
+                pass
+                # TODO What do I do if this packet is for me?
+                # TODO self.received(packet)
+        else:
+            pass
+            #TODO do the ARP thing!
 
     def next_hop(self, dest_IP):
         #Returns IP next IP address according to this router's routing table.

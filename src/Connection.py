@@ -11,16 +11,15 @@ class Connection:
     #     self.connectionLength = length
     #     self.trafficCount = 0
 
-    def __init__(self, interface1, interface2, type = "Coax", length= 100):
-        #Note that node1 and node2 are Node descendent instances, not node ids.
+    def __init__(self, type="Coax", length=100):
+        # Note that node1 and node2 are Node descendant instances, not node ids.
         self.connection_id = Connection.static_id
         Connection.static_id += 1
-        self.interfaces = [interface1, interface2]
+        self.interfaces = []
         self.connectionType = type
         self.connectionLength = length
         self.trafficCount = 0
         self.state = 0
-
 
     def get_latency(self):
         #TODO some sort of calc based on type and length
@@ -34,11 +33,13 @@ class Connection:
     #         return self.nodes[0]
 
 
-    def other_interface(self, node):
-        if node == self.nodes[0]:
-            return self.nodes[1]
+    def other_interface(self, interface):
+        if interface == self.interfaces[0]:
+            print "other_interfaces[1]", self.interfaces[1]
+            return self.interfaces[1]
         else:
-            return self.nodes[0]
+            print "other_interfaces[0]", self.interfaces[0]
+            return self.interfaces[0]
 
     def addTraffic(self):
         self.trafficCount += 1
@@ -51,13 +52,20 @@ class Connection:
             return True
         return False
 
-    def connect(self, interface):
+    def connect1(self, interface):
         # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
         if len(self.interfaces) < 2:
             self.interfaces.append(interface)
 
+    def connect2(self, interface1, interface2):
+        # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
+        self.interfaces = [interface1, interface2]
+
     def disconnect(self, interface):
         self.interfaces.remove(interface)
+
+    def disconnect(self):
+        self.interfaces = []
 
     def reconnect(self, disconnect_int, connect_int):
         self.disconnect(disconnect_int)
@@ -65,3 +73,13 @@ class Connection:
 
     def transmit(self, bit):
         self.state = bit
+
+    def wake_up(self, sending_interface):
+        other = self.other_interface(sending_interface)
+        print "waking up interface with MAC", other.MAC_address
+        other.wake_up()
+
+    def shut_down(self, sending_interface):
+        other = self.other_interface(sending_interface)
+        print "shutting down interface with MAC", other.MAC_address
+        other.shut_down()

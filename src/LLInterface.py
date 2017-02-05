@@ -8,23 +8,18 @@ class LLInterface(object):
     def __init__(self):
         self.MAC_address = LLInterface.static_MAC
         LLInterface.static_MAC += 1
-        self.connection = None
-        self.frame = None
-        self.active = False
-        self.recieving = False
-        self.recieved = False
-        self.transmitting = False
-        self.bit_string = ''
-        self.next_bit = 0
-
-    def __init__(self, connection):
-        self.MAC_address = LLInterface.static_MAC
-        LLInterface.static_MAC += 1
-        self.connect(connection)
+        self.connection = None  # points to current connection object
+        self.frame = None  # points to current frame to be transmitted or that has been received.
+        self.active = False  # this interface has some business that needs attending to.
+        self.receiving = False  # currently receiving bit string to be parsed into self.frame
+        self.received = False  # a frame has been received.
+        self.transmitting = False  # currently transmitting self.frame
+        self.bit_string = ''  # will hold bit string to be parsed if receiving, or to be transmitted if transmitting
+        self.next_bit = 0  # index of next bit to be transmitted from self.bit_string
 
     def connect(self, connection):
         self.connection = connection
-        connection.connect(self)
+        connection.connect1(self)
 
     def disconnect(self, connection):
         self.connection.disconnect(self)
@@ -34,36 +29,35 @@ class LLInterface(object):
         self.frame = frame
 
     def send(self, frame):
+        print "starting frame transmission"
+        self.transmitting = True
+        self.active = True
+        self.frame = frame
+        # TODO This will be fixed eventually (below)
+        self.bit_string = frame.bit_string
+        self.connection.wake_up(self)
 
-        self.transmitting  = True
-        self.transmit(frame)
+    def send_bit(self):
+
+        if len(self.bit_string) > self.next_bit:
+            print "sending bit", self.bit_string[self.next_bit]
+            self.connection.transmit(self.bit_string[self.next_bit])
+            self.next_bit += 1
+        else:
+            print "no more bits to send"
+            #we're done transmitting
+            self.transmitting = False
+            self.active = False
+            self.connection.shut_down(self)
 
     def parse_bit_string(self):
         #TODO: This doesn't really parse anything right now.  Maybe do later.
         self.connection.finish_transmission(self)
 
-    def transmit(self):
-        self.active = True
-        if len(self.bit_string) > self.next_bit:
-            self.connection.transmit(self, self.bit_string[self.next_bit])
-            self.next_bit += 1
-        else:
-            #we're done transmitting
-            self.transmitting = False
-            self.active = False
-
-    def transmit(self, frame):
-        self.frame = frame
-        self.transmit()
 
     def read(self):
-        if self.connection.state != 'stop':
-            self.bit_string += self.connection.state
-        else:
-            self.recieved = True
-            self.recieving = False
-            self.active = False
-            self.parse_bit_string()
+        print "reading bit", self.connection.state
+        self.bit_string += str(self.connection.state)
 
     def parse_bit_string(self):
         #TODO Maybe later I can make this actually legit.
@@ -79,6 +73,18 @@ class LLInterface(object):
         pass
 
     def get_frame(self):
+        self.active = False
+        self.received = False
         frame = self.frame
         self.frame = None
         return frame
+
+    def wake_up(self):
+        print"I'm MAC", self.MAC_address, "and I'm awake!"
+        self.active = True
+        self.receiving = True
+
+    def shut_down(self):
+        print"I'm MAC", self.MAC_address, "and I'm asleep!"
+        self.active = False
+        self.receiving = False
