@@ -105,7 +105,8 @@ class LLInterface(object):
         self.receiving = False
 
 class NLInterface (LLInterface):
-
+    # TODO this is flat IP.  Consider making it hierarchical.
+    # TODO could implement using bitwise operators and keep IP addresses as integer values.
     static_IP = 1
 
     def __init__(self):

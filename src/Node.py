@@ -173,7 +173,6 @@ class Switch(Node):
 class Router(Switch):
     # TODO: all network entities should include a step() function which performs the necessary operations to move them
     # ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
-    # TODO this is flat IP.  Consider making it hierarchical.
 
     ARP_IP = 0
     ARP_payload = '0'
