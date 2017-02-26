@@ -81,7 +81,7 @@ class Switch(Node):
         self.interfaces = {}
 
         # Used to uniquely index the interfaces in the interfaces table.
-        self.num_interfaces = 0
+        self.local_interface_id = 0
 
         # TODO This will not work.  Must transmit from all switches first, and then read from all switches.  Two passes.
         '''
@@ -96,13 +96,13 @@ class Switch(Node):
                  If a packet read is completed, set self.frame = the complete frame, and set received flag)
 
         '''
-    def transmit_all_interfaces(self):
+    def transmit_LL_interfaces(self):
         for id, interface in self.interfaces.items():
             if interface.is_transmitting():
                 print "sending on interface", id, "with MAC", self.interfaces[id].MAC_address
                 interface.transmit()
 
-    def read_all_interfaces(self):
+    def read_LL_interfaces(self):
         for id, interface in self.interfaces.items():
                 if interface.has_received():
                     frame = interface.get_frame()
@@ -114,8 +114,10 @@ class Switch(Node):
 
 
     def new_interface(self):
-        self.interfaces[self.num_interfaces] = LLInterface()
-        self.num_interfaces += 1
+        newInterface = LLInterface()
+        self.interfaces[self.local_interface_id] = newInterface
+        self.local_interface_id += 1
+        return newInterface
 
     def process_frame(self, frame, incoming_interface_id):
         print "processing frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC(), "inbound on interface", incoming_interface_id,\
@@ -172,7 +174,7 @@ class Switch(Node):
 
 class Router(Switch):
     # TODO: all network entities should include a step() function which performs the necessary operations to move them
-    # ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
+    # TODO: ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
 
     ARP_IP = 0
     ARP_payload = '0'
@@ -187,21 +189,25 @@ class Router(Switch):
         self.ARP_table = {}
 
     def new_interface(self):
-        # TODO for now use infinite queues.  Later will set queue size.  This type of queue may not work (it blocks)
+        # TODO for now use infinite queues.  Later will set queue size.
         # Each link layer interface in this Router has an associated input queue, and output queue.
-        self.interfaces[self.num_interfaces] = NLInterface()
-        self.num_interfaces += 1
+        newInterface = NLInterface()
+        self.interfaces[self.local_interface_id] = newInterface
+        self.local_interface_id += 1
+        return newInterface
 
     def process_input_queues(self):
-        #TODO THIS NEXT
-        pass
+        for interface in self.interfaces:
+            if not interface.input_NL_queue.isEmpty():
+                self.process_datagram(interface.input_NL_queue.peek_last())
+
 
 
     def process_output_queues(self):
         #TODO THIS NEXT
         pass
 
-    def transmit_all_interfaces(self):
+    def transmit_LL_interfaces(self):
         # TODO This may only be needed for testing purposes.  Maybe remove
         # Over-ridden from Switch to include input and output queues.
         for id, interface in self.interfaces.items():
@@ -211,7 +217,7 @@ class Router(Switch):
                 interface.send_bit()
                 # else the interface is inactive. Do nothing.
 
-    def read_all_interfaces(self):
+    def read_LL_interfaces(self):
         # TODO This may only be needed for testing purposes.  Maybe remove
         # Over-ridden from Switch to include input and output queues.
         for id, interface in self.interfaces.items():
@@ -226,6 +232,14 @@ class Router(Switch):
                     interface.read()
                 # else the interface is inactive. Do nothing.
 
+    def process_datagram(self, datagram, incoming_interface_id):
+        # Packets could be intended for this router, and not a host, example ARP packets.
+        # If the datagram is destined for some other IP
+        if not datagram.get_dest_IP() == self.IP_address:
+            self.forward_IP_datagram(datagram)
+        else:
+            if self.is_ARP_packet(datagram):
+                self.process_ARP_packet(datagram)
 
     def forward_IP_datagram(self, datagram):
         '''
@@ -237,32 +251,14 @@ class Router(Switch):
         dest_IP = datagram.get_dest_IP()
 
         if isinstance(self.routing_table.get(dest_IP, False), (int, long)):
-            if self.IP_address != dest_IP:
-                next_IP = self.next_hop(dest_IP)
-                datagram.set_connection(
-                    Network.network.connections[Network.network.get_node_pair_id(
-                        self.current_node.node_id, next_IP)])
-            else:
-                pass
-                # TODO What do I do if this packet is for me?
-                # TODO self.received(packet)
+            next_IP = self.next_hop(dest_IP)
+
+
+
         else:
             pass
             #TODO do the ARP thing!
 
-    def elevate_frame(self, frame):
-        self.process_datagram(frame.IP_datagram)
-
-    def process_datagram(self, datagram, incoming_interface_id):
-        # Packets could be intended for this router, and not a host, example ARP packets.
-        # If the datagram is destined for some other IP
-        if not datagram.get_dest_IP() == self.IP_address:
-            # TODO Really, this shouldn't happen.  The switch level should move this along on it's own unless
-            # TODO the packet required higher level processing for some reason.  Yet to be implemented
-            self.forward_IP_datagram(datagram)
-        else:
-            if self.is_ARP_packet(datagram):
-                self.process_ARP_packet(datagram)
 
     def is_ARP_packet(self, datagram):
         return datagram.header.dest_IP == Router.ARP_IP and datagram.get_payload_bits() == Router.ARP_payload

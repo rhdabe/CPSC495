@@ -103,6 +103,16 @@ class Network:
             graph[node] = graph_node
         return graph
 
+    def get_router_graph(self):
+        graph = {}
+        for node in self.nodes:
+            graph_node = {}
+            for connection in self.get_connected_nodes(node):
+                graph_node[connection["node"]] = connection["connection"]
+            graph[node] = graph_node
+        return graph
+
+
 def network_init():
     global network
     network = Network()

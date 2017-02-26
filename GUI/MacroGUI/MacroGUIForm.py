@@ -384,21 +384,26 @@ class Ui_MainWindow(object):
 
         selectedNodes = self.selectedNodes.values()
 
-        node1 = selectedNodes[0]
-        node2 = selectedNodes[1]
+        gnode1 = selectedNodes[0]
+        gnode2 = selectedNodes[1]
+        simNode1 = src.Network.network.nodes[gnode1.getIDInt()]
+        simNode2 = src.Network.network.nodes[gnode2.getIDInt()]
 
         #Add simulation connection
         simNodes = src.Network.network.nodes
-        simConnection = SimulationConnection.Connection(simNodes[node1.getIDInt()], simNodes[node2.getIDInt()],
-                                       self.cboConnectionType.currentText(),
-                                       int(self.txtConnectionLength.toPlainText()))
 
-        src.Network.network.add_connection(node1.getIDInt(), node2.getIDInt(), simConnection)
+        #create the connection
+        simConnection = SimulationConnection.Connection(self.cboConnectionType.currentText(),
+                                       int(self.txtConnectionLength.toPlainText()))
+        #connect it to interfaces in each node.
+        simConnection.connect2(simNode1.new_interface(), simNode2.new_interface())
+
+        src.Network.network.add_connection(gnode1.getIDInt(), gnode2.getIDInt(), simConnection)
 
         #Add GUI connection
-        nodeTuple = src.Network.network.get_node_pair_id(node1.getIDInt(), node2.getIDInt())
+        nodeTuple = src.Network.network.get_node_pair_id(gnode1.getIDInt(), gnode2.getIDInt())
         self.connections.append(nodeTuple)
-        self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, node1, node2)
+        self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, gnode1, gnode2)
 
 
 

@@ -1,12 +1,13 @@
 from NQueue import NQueue
 class LLInterface(object):
     # TODO apparently switch interfaces can send and receive at the same time... maybe figure that out later.
+    #TODO apparently switches do not have MAC addresses for interfaces that connect to Hosts or Routers.
 
     #MAC addresses start from 1.  0 is the broadcast address.
     static_MAC = 1
 
     def __init__(self):
-        self.output_queue = NQueue()
+        self.output_LL_queue = NQueue()
         self.MAC_address = LLInterface.static_MAC
         LLInterface.static_MAC += 1
         self.connection = None  # points to current connection object
@@ -18,7 +19,7 @@ class LLInterface(object):
         self.next_bit = 0  # index of next bit to be transmitted from self.bit_string
 
     def is_transmitting(self):
-        return self.transmitting or not self.output_queue.isEmpty()
+        return self.transmitting or not self.output_LL_queue.isEmpty()
 
     def connect(self, connection):
         self.connection = connection
@@ -34,13 +35,14 @@ class LLInterface(object):
     def transmit(self):
         if self.transmitting:
             self.send_bit()
-        elif not self.output_queue.isEmpty():
-            self.send(self.output_queue.deque())
+        elif not self.output_LL_queue.isEmpty():
+            self.send(self.output_LL_queue.deque())
 
     def send(self, frame):
+        #command from switch to send a frame
         if self.transmitting:
             print "switch adding frame to output queue"
-            self.output_queue.enqueue(frame)
+            self.output_LL_queue.enqueue(frame)
         else:
             print "starting frame transmission"
             self.transmitting = True
@@ -80,13 +82,13 @@ class LLInterface(object):
         return self.receiving
 
     def is_transmitting(self):
-        return self.transmitting or not self.output_queue.isEmpty()
+        return self.transmitting or not self.output_LL_queue.isEmpty()
 
     def has_received(self):
         return self.received
 
     def is_active(self):
-        return self.transmitting or self.receiving or self.received or not self.output_queue.isEmpty()
+        return self.transmitting or self.receiving or self.received or not self.output_LL_queue.isEmpty()
 
     def get_frame(self):
         self.received = False
@@ -103,14 +105,26 @@ class LLInterface(object):
         print"I'm MAC", self.MAC_address, "and I'm asleep!"
         self.active = False
         self.receiving = False
+        self.received = True
 
 class NLInterface (LLInterface):
     # TODO this is flat IP.  Consider making it hierarchical.
     # TODO could implement using bitwise operators and keep IP addresses as integer values.
     static_IP = 1
 
+    "The idea here is that the NL queues are to hold IP Datagrams only.  The datagrams are then converted to frames" \
+    "before being put into the LL output queue, or frames are immediately converted to IP datagrams and put into the" \
+    "input NL queue on receipt by a network layer interface."
     def __init__(self):
         LLInterface.__init__()
         self.IP_address = NLInterface.static_IP
         NLInterface.static_IP += 1
-        self.input_queue = NQueue()
+        self.input_NL_queue = NQueue()
+        self.output_NL_queue = NQueue()
+
+    def shut_down(self):
+        print"I'm MAC", self.MAC_address, "and I'm asleep!"
+        self.active = False
+        self.receiving = False
+        self.received = True
+        self.input_NL_queue.enqueue(self.frame.IP_datagram)

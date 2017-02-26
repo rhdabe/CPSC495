@@ -11,5 +11,8 @@ class NQueue:
     def dequeue(self):
         return self.items.pop()
 
+    def peek_last(self):
+        return self.items[self.size() - 1]
+
     def size(self):
         return len(self.items)
