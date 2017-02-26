@@ -51,7 +51,7 @@ def dijkstra(graph, dest_node, source_node, visited=[], cost={}, previous={}):
         for neighbor in graph[source_node]:
             if neighbor not in visited:
                 # new_cost will contain the sum of value in cost and the cost of source node's neighbour
-                new_cost = cost[source_node] + graph[source_node][neighbor].get_latency()
+                new_cost = cost[source_node] + graph[source_node][neighbor]
                 # if new cost is smaller than calculated then update the cost dict with new min cost
                 # float('inf') is representing infinity and it will be default result if the error will be generated
                 #  that is cost will be infinity that case
