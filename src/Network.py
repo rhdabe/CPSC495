@@ -103,6 +103,18 @@ class Network:
             graph[node] = graph_node
         return graph
 
+    def get_better_graph(self):
+        #Need to include the actual node and connection objects.
+        #This will allow me to replace node_id's by interface IP addresses in the table
+        #quite easily.
+        graph = {}
+        for node in self.nodes.values():
+            graph_node = {}
+            for connection in self.get_connected_nodes(node.node_id):
+                graph_node[self.nodes[connection["node"]]] = connection["connection"]
+            graph[node] = graph_node
+        return graph
+
 def network_init():
     global network
     network = Network()

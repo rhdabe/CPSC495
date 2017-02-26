@@ -15,42 +15,47 @@ class Frame:
         self.payload = payload
         self.bit_string = None
 
-connection = Connection("Coax", 100)
-
-s1 = Switch()
-s1.new_interface()  # Will have MAC address 1
-s1.switch_table[2] = {"Interface":0, "TTL": 100}
-
-s2 = Switch()
-s2.new_interface()  # Will have MAC address 2
-
-s1.new_interface() # interface frame will come in on
-
-int1 = s1.interfaces[0]
-int1.connect(connection)
-int2 = s2.interfaces[0]
-int2.connect(connection)
-int3 = s1.interfaces[1]
-
-connection.connect2(int1, int2)
-
-frame = EthernetFrame(EthernetHeader(3,2), "01010100011010000110100101110011001000000110100101110011001000000110000100100000011001100111001001100001011011010110010100111111")
-#ascii for This is a frame?
 
 
-#  Now we're gonna pretend int 1 just received the frame to see if s1 will broadcast it correctly.
-int3.active = True
-int3.received = True
-int3.frame = frame
 
-while int1.is_active() or int3.is_active():
-    s1.transmit_LL_interfaces()
-    s2.transmit_LL_interfaces()
-    s1.read_LL_interfaces()
-    s2.read_LL_interfaces()
 
-print "sent", int1.bit_string
-print "got ", int2.bit_string
+#Switch test
+# connection = Connection("Coax", 100)
+#
+# s1 = Switch()
+# s1.new_interface()  # Will have MAC address 1
+# s1.switch_table[2] = {"Interface":0, "TTL": 100}
+#
+# s2 = Switch()
+# s2.new_interface()  # Will have MAC address 2
+#
+# s1.new_interface() # interface frame will come in on
+#
+# int1 = s1.interfaces[0]
+# int1.connect(connection)
+# int2 = s2.interfaces[0]
+# int2.connect(connection)
+# int3 = s1.interfaces[1]
+#
+# connection.connect2(int1, int2)
+#
+# frame = EthernetFrame(EthernetHeader(3,2), "01010100011010000110100101110011001000000110100101110011001000000110000100100000011001100111001001100001011011010110010100111111")
+# #ascii for This is a frame?
+#
+#
+# #  Now we're gonna pretend int 1 just received the frame to see if s1 will broadcast it correctly.
+# int3.active = True
+# int3.received = True
+# int3.frame = frame
+#
+# while int1.is_active() or int3.is_active():
+#     s1.transmit_LL_interfaces()
+#     s2.transmit_LL_interfaces()
+#     s1.read_LL_interfaces()
+#     s2.read_LL_interfaces()
+#
+# print "sent", int1.bit_string
+# print "got ", int2.bit_string
 
 
 

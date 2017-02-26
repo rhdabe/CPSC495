@@ -116,7 +116,7 @@ class NLInterface (LLInterface):
     "before being put into the LL output queue, or frames are immediately converted to IP datagrams and put into the" \
     "input NL queue on receipt by a network layer interface."
     def __init__(self):
-        LLInterface.__init__()
+        LLInterface.__init__(self)
         self.IP_address = NLInterface.static_IP
         NLInterface.static_IP += 1
         self.input_NL_queue = NQueue()
