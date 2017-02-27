@@ -1,5 +1,5 @@
 from src.Network import *
-
+from src.Node import *
 # graph = { 1:{2:2,3:1},
 #            2:{1:2,3:8},
 #            3:{1:1,2:8,6:4,4:2},
@@ -30,16 +30,38 @@ def routingTables(network):
 
             tables[node] = table
 
-    #TODO:  now convert these tables into ones which contain IP interface addresses instead of nodes.
+    #TODO:  now convert these tables into ones which contain interface IP addresses instead of nodes.
 
-    for node in table:
-        for dest_node in table[node]:
-            next_node = table[dest_node]
-            next_connection = (Network.network.connections[Network.network.get_node_pair_id(node.node_id, next_node.node_id)])
-            connection_interfaces = next_connection.interfaces
+    print"routing Tables"
+    print tables
 
-            for interface in dest_node.interfaces:
-                table[node][dest_node][interface.IP_address] =
+    for node in tables:
+        if isinstance(node, Router):
+            # for each router in the graph
+            for dest_node in tables[node]:
+                if isinstance(dest_node, Node):
+                    #NLInterface instances are added as we go along, so we need to ignore these as the crop up.
+
+                    # for each destination node in this node's routing table
+                    # look up the next node...
+                    next_node = tables[node][dest_node]
+                    # to look up the connection between this node and the next node...
+                    next_connection = (Network.network.connections[Network.network.get_node_pair_id(node.node_id, next_node.node_id)])
+                    # and get the interfaces from the connection...
+                    con_interfaces = next_connection.interfaces
+                    # so we can determine which interface goes from this node to the next node
+                    next_interface = con_interfaces[0] if con_interfaces[0] == node.node_id else con_interfaces[1]
+                    for interface in dest_node.interfaces.values():
+                        # for every interface on the destination node, add an entry to the forwarding table
+                        # which specifies next_interface as the one to send traffic out on.
+                        tables[node][interface.IP_address] = next_interface
+
+                    # now delete the old entry for dest_node
+
+                    del(tables[node][dest_node])
+        else:
+            del(tables[node])
+
 
     print"routing Tables"
     print tables
@@ -149,9 +171,5 @@ def dijkstra2(graph, source_node, dest_node, visited=[], distances={}, parents={
 #         node_with_minvalue = min(unvisited, key=lambda k: unvisited.get(k,None))
 #         return dijkstra2(graph, node_with_minvalue, dest_id, visited, distances, parents)
 
-
-if __name__ == "__main__":
-    tables = routingTables(network)
-    for node,table in zip(tables.keys(),tables.values()): print node, table
 
 

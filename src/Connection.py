@@ -25,20 +25,11 @@ class Connection:
         #TODO some sort of calc based on type and length
         return self.connectionLength
 
-    #TODO : remove this
-    # def other_node(self, node):
-    #     if node == self.nodes[0]:
-    #         return self.nodes[1]
-    #     else:
-    #         return self.nodes[0]
-
 
     def other_interface(self, interface):
         if interface == self.interfaces[0]:
-            print "other_interfaces[1]", self.interfaces[1]
             return self.interfaces[1]
         else:
-            print "other_interfaces[0]", self.interfaces[0]
             return self.interfaces[0]
 
     def addTraffic(self):
