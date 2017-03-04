@@ -1,7 +1,11 @@
 from NQueue import NQueue
+from RSegments.IPDatagram import *
+from RSegments.EthernetFrame import *
 class LLInterface(object):
+    # TODO for now use infinite queues.  Later will set queue size.
     # TODO apparently switch interfaces can send and receive at the same time... maybe figure that out later.
-    #TODO apparently switches do not have MAC addresses for interfaces that connect to Hosts or Routers.
+    # TODO apparently switches do not have MAC addresses for interfaces that connect to Hosts or Routers.
+
 
     #MAC addresses start from 1.  0 is the broadcast address.
     static_MAC = 1
@@ -18,9 +22,6 @@ class LLInterface(object):
         self.bit_string = ''  # will hold bit string to be parsed if receiving, or to be transmitted if transmitting
         self.next_bit = 0  # index of next bit to be transmitted from self.bit_string
 
-    def is_transmitting(self):
-        return self.transmitting or not self.output_LL_queue.isEmpty()
-
     def connect(self, connection):
         self.connection = connection
         connection.connect1(self)
@@ -32,26 +33,26 @@ class LLInterface(object):
     def set_frame(self, frame):
         self.frame = frame
 
-    def transmit(self):
-        if self.transmitting:
-            self.send_bit()
-        elif not self.output_LL_queue.isEmpty():
-            self.send(self.output_LL_queue.deque())
-
-    def send(self, frame):
-        #command from switch to send a frame
+    def send_frame(self, frame):
+        # command from switch to send a frame
+        assert isinstance(frame, EthernetFrame), "ERROR: %s is not an EthernetFrame" % frame
         if self.transmitting:
             print "switch adding frame to output queue"
             self.output_LL_queue.enqueue(frame)
         else:
             print "starting frame transmission"
             self.transmitting = True
-            self.active = True
             self.frame = frame
             # TODO This will be fixed eventually (below)
             self.bit_string = frame.get_bit_string()
             self.connection.wake_up(self)
             self.send_bit()
+
+    def transmit(self):
+        if self.transmitting:
+            self.send_bit()
+        elif not self.output_LL_queue.isEmpty():
+            self.send_frame(self.output_LL_queue.dequeue())
 
     def send_bit(self):
         if len(self.bit_string) > self.next_bit:
@@ -64,11 +65,9 @@ class LLInterface(object):
             self.transmitting = False
             self.connection.shut_down(self)
 
-
     def parse_bit_string(self):
         #TODO: This doesn't really parse anything right now.  Maybe do later.
         self.connection.finish_transmission(self)
-
 
     def read(self):
         print "reading bit", self.connection.state
@@ -77,6 +76,9 @@ class LLInterface(object):
     def parse_bit_string(self):
         #TODO Maybe later I can make this actually legit.
         self.frame = self.connection.other_interface(self).frame
+
+    def is_transmitting(self):
+        return self.transmitting or not self.output_LL_queue.isEmpty()
 
     def is_receiving(self):
         return self.receiving
@@ -97,11 +99,13 @@ class LLInterface(object):
         return frame
 
     def wake_up(self):
+        # Signals the beginning of an incoming frame.
         print"I'm MAC", self.MAC_address, "and I'm awake!"
         self.active = True
         self.receiving = True
 
     def shut_down(self):
+        # Signals the end of an incoming frame.
         print"I'm MAC", self.MAC_address, "and I'm asleep!"
         self.active = False
         self.receiving = False
@@ -112,8 +116,8 @@ class NLInterface (LLInterface):
     # TODO could implement using bitwise operators and keep IP addresses as integer values.
     static_IP = 1
 
-    "The idea here is that the NL queues are to hold IP Datagrams only.  The datagrams are then converted to frames" \
-    "before being put into the LL output queue, or frames are immediately converted to IP datagrams and put into the" \
+    "The idea here is that the NL queues are to hold IP Datagrams only.  Outgoing datagrams are converted to frames" \
+    "before being put into the LL output queue (somewhere).  Incoming frames are immediately converted to IP datagrams and put into the" \
     "input NL queue on receipt by a network layer interface."
     def __init__(self):
         LLInterface.__init__(self)
@@ -123,8 +127,13 @@ class NLInterface (LLInterface):
         self.output_NL_queue = NQueue()
 
     def shut_down(self):
+        # Signals the end of an incoming frame.
         print"I'm MAC", self.MAC_address, "and I'm asleep!"
-        self.active = False
         self.receiving = False
         self.received = True
         self.input_NL_queue.enqueue(self.frame.IP_datagram)
+
+    def send_datagram(self, datagram):
+        assert isinstance(datagram, IPDatagram), "ERROR: %s is not an IPDatagram" % datagram
+        # command from switch to send a frame
+        self.output_NL_queue.add(datagram)

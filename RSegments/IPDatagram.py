@@ -18,9 +18,8 @@ class IPHeader:
 
 class IPDatagram:
     def __init__(self, header, payload):
-        assert isinstance(payload, EthernetFrame), "ERROR: %s is not an EthernetFrame " % (payload)
         self.header = header
-        self.frame = payload
+        self.payload = payload
 
     # default print notation when printing an IPDatagram
     def __str__(self):
@@ -31,6 +30,12 @@ class IPDatagram:
 
     def get_dest_IP(self):
         return self.header.dest_IP
+
+    def get_bit_string(self):
+        return str(self.header) + self.IP_datagram
+
+    def get_payload_bits(self):
+        return self.IP_datagram
 
 
 

@@ -30,11 +30,6 @@ def routingTables(network):
 
             tables[node] = table
 
-    #TODO:  now convert these tables into ones which contain interface IP addresses instead of nodes.
-
-    print"routing Tables"
-    print tables
-
     for node in tables:
         if isinstance(node, Router):
             # for each router in the graph
@@ -62,9 +57,6 @@ def routingTables(network):
         else:
             del(tables[node])
 
-
-    print"routing Tables"
-    print tables
     return tables
 
 def shortest_paths(graph):

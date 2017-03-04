@@ -5,6 +5,7 @@ from PyQt4.Qt import *
 from Node import *
 from Connection import *
 from RSegments.EthernetFrame import *
+from RSegments.IPDatagram import *
 
 
 class Frame:
@@ -16,8 +17,44 @@ class Frame:
         self.bit_string = None
 
 
+#Router test
 
+        connection = Connection("Coax", 100)
 
+        r1 = Router()
+        r1.new_interface()  # Will have MAC address 1
+        r1.switch_table[2] = {"Interface":0, "TTL": 100}
+
+        r2 = Router()
+        r2.new_interface()  # Will have MAC address 2
+
+        r1.new_interface() # interface frame will come in on
+
+        int1 = r1.interfaces[0]
+        int1.connect(connection)
+        int2 = r2.interfaces[0]
+        int2.connect(connection)
+        int3 = r1.interfaces[1]
+
+        connection.connect2(int1, int2)
+
+        datagram = IPDatagram(IPHeader(1,2), "01010100011010000110100101110011001000000110100101110011001000000110000100100000011001100111001001100001011011010110010100111111")
+        frame = EthernetFrame(EthernetHeader(3,2), datagram)
+        #ascii for 'This is a frame?'
+
+        #  Now we're gonna pretend int3 just received the frame to see if r1 will forward it correctly.
+        int3.active = True
+        int3.received = True
+        int3.frame = frame
+
+        while int1.is_active() or int3.is_active():
+            r1.transmit_LL_interfaces()
+            r2.transmit_LL_interfaces()
+            r1.read_LL_interfaces()
+            r2.read_LL_interfaces()
+
+        print "sent", int1.bit_string
+        print "got ", int2.bit_string
 
 #Switch test
 # connection = Connection("Coax", 100)

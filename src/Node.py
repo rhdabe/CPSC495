@@ -1,6 +1,5 @@
-from Segments.EthernetFrame import EthernetFrame
-from Segments.IPDatagram import IPDatagram
-from Segments.Segment import *
+from RSegments.EthernetFrame import *
+from RSegments.IPDatagram import *
 import Network
 from Interfaces import LLInterface, NLInterface
 import NQueue
@@ -142,14 +141,14 @@ class Switch(Node):
     def forward_LL_frame(self, frame, next_interface_id):
         print "forwarding frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC(), "on interface", next_interface_id,\
             "with MAC", self.interfaces[next_interface_id].MAC_address
-        self.interfaces[next_interface_id].send(frame)
+        self.interfaces[next_interface_id].send_frame(frame)
 
     def broadcast(self, frame, incoming_id):
         print "broadcasting frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC()
         # TODO Don't know if this is good enough...
         for id,interface in self.interfaces.iteritems():
             if not id == incoming_id:
-                interface.send(frame)
+                interface.send_frame(frame)
 
 
     def next_interface(self, dest_MAC):
@@ -170,42 +169,26 @@ class Switch(Node):
 
     def wrap_new_ethernet_frame(self, message, destination_id):
         #TODO the length of the header shouldn't be zero?
-        return EthernetFrame(Header(self.static_id, destination_id, 0), message)
+        return EthernetFrame(EthernetHeader(self.static_id, destination_id, 0), message)
 
 class Router(Switch):
     # TODO: all network entities should include a step() function which performs the necessary operations to move them
     # TODO: ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
 
-    ARP_IP = 0
-    ARP_payload = '0'
+    ARP_MAC = 0
+    ARP_payload = 'ARP'
 
     def __init__(self):
         Switch.__init__(self)
 
-        #Routing table format: {final_dest_IP : next IP}
+        # Routing table format: {final_dest_IP : next IP}
         self.routing_table = {}
 
-        #ARP table format: ["IP" : {"MAC" : #, "TTL" : #} }
+        # ARP table format: ["IP" : {"MAC" : #, "TTL" : #} }
         self.ARP_table = {}
 
-    def new_interface(self):
-        # TODO for now use infinite queues.  Later will set queue size.
-        # Each link layer interface in this Router has an associated input queue, and output queue.
-        newInterface = NLInterface()
-        self.interfaces[self.local_interface_id] = newInterface
-        self.local_interface_id += 1
-        return newInterface
-
-    def process_input_queues(self):
-        for interface in self.interfaces:
-            if not interface.input_NL_queue.isEmpty():
-                self.process_datagram(interface.input_NL_queue.peek_last())
-
-
-
-    def process_output_queues(self):
-        #TODO THIS NEXT
-        pass
+        # List of packets waiting on ARP replies.  Used to prevent this router from ARP spamming.
+        self.ARP_list = []
 
     def transmit_LL_interfaces(self):
         # TODO This may only be needed for testing purposes.  Maybe remove
@@ -232,61 +215,90 @@ class Router(Switch):
                     interface.read()
                 # else the interface is inactive. Do nothing.
 
-    def process_datagram(self, datagram, incoming_interface_id):
-        # Packets could be intended for this router, and not a host, example ARP packets.
+    def new_interface(self):
+
+        # Each link layer interface in this Router has an associated input queue, and output queue.
+        newInterface = NLInterface()
+        self.interfaces[self.local_interface_id] = newInterface
+        self.local_interface_id += 1
+        return newInterface
+
+    def process_input_queues(self):
+        # Check all input queues for delivered datagrams.
+        for interface_id, interface in self.interfaces.iteritems():
+            if not interface.input_NL_queue.isEmpty():
+                self.process_datagram(interface.input_NL_queue, interface_id)
+
+    def process_output_queues(self):
+        # Check all output queues for pending IPDatagram transmissions
+        for interface in self.interfaces:
+            if not interface.output_NL_queue.isEmpty():
+                datagram = interface.output_NL_queue.peek_last()
+                dest_IP = datagram.get_dest_IP()
+                dest_MAC = self.ARP_table.get(dest_IP, False)
+                if isinstance(dest_MAC, (int,long)):
+                    # If we know the MAC address associated with the destination IP, then encapsulate and send.
+                    interface.output_LL_queue.enqueue(EthernetFrame(EthernetHeader(), interface.output_NL_queue.dequeue()))
+                else:
+                    # If we do not know, we must leave the IPDatagarm in the queue, and enact ARP.
+                    arp_frame = self.make_ARP_frame(interface.IP_address, dest_IP, interface.MAC_address)
+                    interface.send_frame(arp_frame)
+                    self.ARP_list.append(datagram)
+
+    def process_datagram(self, queue, incoming_interface_id):
+        # I'm working with an interface queue here because later I may change to finite queues, in which case, the
+        # output queue might be full and so dequeuing the packet way back at the begining of processing would be
+        # the wrong thing to do.  That decision should be made in the forward_IP_datagram method.
+
+        datagram = queue.peek_last()
+        # Packets could be intended for this router, and not a host, in a real network (control stuff)
         # If the datagram is destined for some other IP
         if not datagram.get_dest_IP() == self.IP_address:
-            self.forward_IP_datagram(datagram)
+            self.forward_IP_datagram(queue)
         else:
             if self.is_ARP_packet(datagram):
-                self.process_ARP_packet(datagram)
+                self.process_ARP_packet(queue)
 
-    def forward_IP_datagram(self, datagram):
-        '''
-        Look in routing table for which IP I should send this packet to next.
-        If I know the MAC address for that IP, just DOOIT!
-        If I do not, then broadcast ARP packet to get that MAC and add it to ARP table.
-        '''
+    def forward_IP_datagram(self, queue):
+        # I'm working with an interface queue here because later I may change to finite queues, in which case, the
+        # output queue might be full and so dequeuing the packet way back at the begining of processing would be
+        # the wrong thing to do.  The decision should be made here as to whether forwarding actually happens.
 
         dest_IP = datagram.get_dest_IP()
 
-        if isinstance(self.routing_table.get(dest_IP, False), (int, long)):
-            next_IP = self.next_hop(dest_IP)
+        #TODO This if seems totally useless.
 
+        next_interface = self.next_hop(dest_IP)
+        next_interface.output_NL_queue.enqueue(queue.dequeue())
 
+    def make_ARP_frame(self, src_IP, dest_IP, src_MAC):
+        ARP_datagram = IPDatagram(IPHeader(src_IP, self.dest_IP))
+        ARP_frame = EthernetFrame(EthernetHeader(src_MAC, Router.ARP_MAC), Router.ARP_payload)
+        return ARP_frame
 
-        else:
-            pass
-            #TODO do the ARP thing!
-
-
-    def is_ARP_packet(self, datagram):
-        return datagram.header.dest_IP == Router.ARP_IP and datagram.get_payload_bits() == Router.ARP_payload
+    def is_ARP_packet(self, frame):
+        datagram = frame.IP_datagram
+        return isinstance(frame, EthernetFrame) and datagram.header.dest_IP == Router.ARP_IP \
+            and datagram.payload == Router.ARP_payload
 
     def process_ARP_packet(self, datagram):
         datagram.dest_IP = datagram.get_src_IP()
         datagram.src_IP = self.IP_address
 
-
     def next_hop(self, dest_IP):
         # Returns next IP address according to this router's routing table.
         return self.routing_table[dest_IP]
 
-    def ARP(self, IP_address):
-        '''
-        Broadcast ARP packet to get MAC address for the given IP address and add it to ARP table.
-        '''
-        pass
-
-    def get_ip_header(self, message):
-        return message.ip_header
-
-    def get_ip_segment(self, message):
-        return message.segment
-
-    def wrap_new_IP_datagram(self, message, source_id, destination_id):
-        #TODO the length of the header shouldn't be zero?
-        return IPDatagram(Header(source_id, destination_id, 0),message)
+#TODO decide whether to keep these or nuke them.
+    # def get_ip_header(self, message):
+    #     return message.ip_header
+    #
+    # def get_ip_segment(self, message):
+    #     return message.segment
+    #
+    # def wrap_new_IP_datagram(self, message, source_id, destination_id):
+    #     #TODO the length of the header shouldn't be zero?
+    #     return IPDatagram(Header(source_id, destination_id, 0),message)
 
     def step(self):
         # TODO implement this.

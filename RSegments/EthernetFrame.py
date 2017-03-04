@@ -24,8 +24,3 @@ class EthernetFrame:
     def get_dest_MAC(self):
         return self.header.dest_MAC
 
-    def get_bit_string(self):
-        return str(self.header) + self.IP_datagram
-
-    def get_payload_bits(self):
-        return self.IP_datagram

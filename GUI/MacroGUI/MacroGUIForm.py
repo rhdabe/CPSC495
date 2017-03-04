@@ -291,6 +291,9 @@ class Ui_MainWindow(object):
         self.dockSimulationControls.setWindowTitle(_translate("MainWindow", "Simulation Controls", None))
         self.btnMsg.setText(_translate("MainWindow", "Messages", None))
 
+        #Added so I don't have to click the start button EVERY time I want to test something.
+        self.startSimulation()
+
     # I cannot figure out how to put these calls elsewhere yet so will need to copy each time .ui file is recreated
 
     def initializeWidgets(self):
@@ -405,36 +408,6 @@ class Ui_MainWindow(object):
         self.connections.append(nodeTuple)
         self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, gnode1, gnode2)
 
-
-
-        #Darren's code
-        #TODO remove this
-        # tooMany = False
-        # numNodes = 0
-        #
-        # for x in range(len(self.nodes)):
-        #     if self.nodes[x].isSelected and numNodes == 0:
-        #         node1 = self.nodes[x]
-        #         numNodes = numNodes + 1
-        #     elif self.nodes[x].isSelected and numNodes == 1:
-        #         node2 = self.nodes[x]
-        #         numNodes = numNodes + 1
-        #     elif self.nodes[x].isSelected and numNodes == 2:
-        #         tooMany = True
-        #     x = x + 1
-        #
-        # if not tooMany and numNodes == 2:
-        #     connection = Connection(node1, node2, self.txtConnectionBandwidth.toPlainText())
-        #     connection.connectionType = self.cboConnectionType.currentText()
-        #     connection.connectionLength = self.txtConnectionLength.toPlainText()
-        #     connection.connectionBandWidth = self.txtConnectionBandwidth.toPlainText()
-        #     self.connections.append(connection)
-        #
-        #     self.placeConnectionGraphic(connection.connection_id, connection.connectionType, node1, node2)
-        # elif tooMany:
-        #     print "Cant select more than 2 nodes before attempting to create a connection"
-        # else:
-        #     print "Must select 2 nodes before attempting to create a connection"
 
     def deleteSelectedConnections(self):
         for connection in self.selectedConnections:
@@ -676,15 +649,20 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
                                self.MsgWindow.refreshDropdowns)
 
-
+from RoutingOrSwitchTableWindow import TableWindow
 
 class NodeLabel(QtGui.QLabel):
+
+    # Warning: This class has a secret variable called nodeObject which references the simulation node to which
+    # this label corresponds.
 
     def setMainWindow(self, mw):
         self.mainWindow = mw
 
     def mouseDoubleClickEvent(self, ev):
         print "double click event"
+
+        self.window = TableWindow(QtGui.QMainWindow(), self.nodeObject)
 
     def mousePressEvent(self, ev):
         # TODO add Shift + Click for multiple selection
