@@ -16,6 +16,8 @@ import src.Connection as SimulationConnection
 from Node import *
 import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
+from RoutingOrSwitchTableWindow import TableWindow
+import routingTableAlgorithm
 # import sip
 import time
 
@@ -313,12 +315,12 @@ class Ui_MainWindow(object):
             self.txtConnectionBandwidth.hide()
 
     def addNode(self):
-       #Create the GUI node
+        # Create the GUI node
         thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
         self.nodes[int(thisNode.getUniqueID())] = thisNode
         self.placeNodeGraphic(thisNode)
 
-        #Create the simulation node
+        # Create the simulation node
         self.addSimulationNode()
 
 
@@ -408,6 +410,8 @@ class Ui_MainWindow(object):
         self.connections.append(nodeTuple)
         self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, gnode1, gnode2)
 
+        # Recompute routing tables to account for new connection
+        self.recomputeRoutingTables()
 
     def deleteSelectedConnections(self):
         for connection in self.selectedConnections:
@@ -415,6 +419,8 @@ class Ui_MainWindow(object):
             self.connections.remove(connection)
             #remove simulation connection
             del(src.Network.network.connections[connection])
+
+        self.recomputeRoutingTables()
 
         #Remove all selected connections.
         self.selectedConnections = []
@@ -455,14 +461,9 @@ class Ui_MainWindow(object):
             else: selectedFlags[node] = False
 
             self.selectedNodes[node] = self.nodes[node]
-        print "Before:"
-        print src.Network.network.connections
 
         self.deleteSelectedConnections()
         self.addConnection()
-
-        print "After:"
-        print src.Network.network.connections
 
         # remove the nodes from the selected nodes list to regain consistency with GUI.
         for node in node_ids:
@@ -642,6 +643,14 @@ class Ui_MainWindow(object):
         self.simulation_paused = True
         self.simulation_thread.end()
 
+    def recomputeRoutingTables(self):
+        # compute routing tables for each router and host
+        tables = routingTableAlgorithm.routingTables(src.Network.network)
+
+        # insert routing tables into the nodes
+        for node in src.Network.network.nodes.values():
+            node.routing_table = tables[node]
+
     def openMsgWindow(self):  # Method to open button window
         self.MsgWindow = SendMessage_Window(self.MsgWindow)
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
@@ -649,7 +658,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
                                self.MsgWindow.refreshDropdowns)
 
-from RoutingOrSwitchTableWindow import TableWindow
+
 
 class NodeLabel(QtGui.QLabel):
 

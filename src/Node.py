@@ -95,6 +95,14 @@ class Switch(Node):
                  If a packet read is completed, set self.frame = the complete frame, and set received flag)
 
         '''
+
+    def get_pretty_switch_table(self):
+
+        string = "{Desination MAC : Outgoing Interface ID : Interface MAC address}\n"
+
+        for MAC, int_id in self.interfaces.iteritems():
+            string += str(MAC) + ":" + str(int_id) +  ":" + str(self.interfaces[int_id].MAC_address) + "\n"
+
     def transmit_LL_interfaces(self):
         for id, interface in self.interfaces.items():
             if interface.is_transmitting():
@@ -289,6 +297,14 @@ class Router(Switch):
         # Returns next IP address according to this router's routing table.
         return self.routing_table[dest_IP]
 
+    def get_pretty_routing_table(self):
+        string = "{Destination IP Address : Next IP Address}"
+        for dest_IP, next_interface in self.routing_table.iteritems():
+            string += str(dest_IP) + " : " + str(next_interface.IP_address) + "\n"
+
+        return string
+
+
 #TODO decide whether to keep these or nuke them.
     # def get_ip_header(self, message):
     #     return message.ip_header
@@ -327,6 +343,7 @@ class Host(Router):
 
     def __init__(self):
         Router.__init__(self)
+        self.new_interface()
 
     def get_protocol_header(self, message):
         return message.header
@@ -341,6 +358,11 @@ class Host(Router):
             return UDPSegment(header, message)
         else:
             return Segment(header, message)
+
+    def new_interface(self):
+        # Restrict Hosts to have a single IP address for simplicity of message sending.
+        if len(self.interfaces) == 0:
+            self.interfaces[0] = NLInterface()
 
     def send_message(self, dest_id, message_string):
         Network.network.create_messageTCP(self.static_id, dest_id, message_string)
