@@ -115,20 +115,19 @@ class SendMessage_Window(object):
 
     def refreshDropdowns(self):
         # TODO make this less annoying somehow: always resets to first element
-
         # TODO probably makes more sense to add another dock widget to the main window for this function
+
+
         # Clear the current dropdown information.
         self.toComboBox.clear()
         self.toComboBox.clearEditText()
         self.fromComboBox.clear()
         self.fromComboBox.clearEditText()
-        node_ids = src.Network.network.nodes.keys()
-        nodes = src.Network.network.nodes
+        hosts = src.Network.network.hosts
         # Repopulate the dropdowns with updated info from the network.
-        for node_id in node_ids:
-            if isinstance(nodes[node_id], Host):
-                self.toComboBox.addItem(_fromUtf8(str(node_id)))
-                self.fromComboBox.addItem(_fromUtf8(str(node_id)))
+        for host in hosts.values():
+            self.toComboBox.addItem(_fromUtf8(str(host.get_IP_address())))
+            self.fromComboBox.addItem(_fromUtf8(str(host.get_IP_address())))
 
     def send_message(self):
         # Use this for sending the standard string to the network/nodes.
@@ -139,12 +138,3 @@ class SendMessage_Window(object):
         else:
             message = "UDP TO: " + str(self.toComboBox.currentText()) + " FROM: " + str(self.fromComboBox.currentText())
             src.Network.network.create_messageUDP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
-
-        self.refreshDropdowns()
-
-    def getHosts(self):
-        array = []
-        for index in range(len(src.Network.nodes)):
-            if isinstance(src.Network.nodes[index], Host):
-                array.append(src.Network.nodes[index])
-        return array

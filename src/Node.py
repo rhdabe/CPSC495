@@ -98,10 +98,12 @@ class Switch(Node):
 
     def get_pretty_switch_table(self):
 
-        string = "{Desination MAC : Outgoing Interface ID : Interface MAC address}\n"
+        string = "{Desination MAC : Outgoing Interface ID [Interface MAC address]}\n"
 
         for MAC, int_id in self.interfaces.iteritems():
-            string += str(MAC) + ":" + str(int_id) +  ":" + str(self.interfaces[int_id].MAC_address) + "\n"
+            string += str(MAC) + ":" + str(int_id) +  "[" + str(self.interfaces[int_id].MAC_address) + "]\n"
+
+        return string
 
     def transmit_LL_interfaces(self):
         for id, interface in self.interfaces.items():
@@ -121,7 +123,7 @@ class Switch(Node):
 
 
     def new_interface(self):
-        newInterface = LLInterface()
+        newInterface = LLInterface(self)
         self.interfaces[self.local_interface_id] = newInterface
         self.local_interface_id += 1
         return newInterface
@@ -226,7 +228,7 @@ class Router(Switch):
     def new_interface(self):
 
         # Each link layer interface in this Router has an associated input queue, and output queue.
-        newInterface = NLInterface()
+        newInterface = NLInterface(self)
         self.interfaces[self.local_interface_id] = newInterface
         self.local_interface_id += 1
         return newInterface
@@ -298,6 +300,8 @@ class Router(Switch):
         return self.routing_table[dest_IP]
 
     def get_pretty_routing_table(self):
+        print "get pretty routing table", self.routing_table
+
         string = "{Destination IP Address : Next IP Address}"
         for dest_IP, next_interface in self.routing_table.iteritems():
             string += str(dest_IP) + " : " + str(next_interface.IP_address) + "\n"
@@ -362,9 +366,16 @@ class Host(Router):
     def new_interface(self):
         # Restrict Hosts to have a single IP address for simplicity of message sending.
         if len(self.interfaces) == 0:
-            self.interfaces[0] = NLInterface()
+            self.interfaces[0] = NLInterface(self)
 
-    def send_message(self, dest_id, message_string):
+        return self.interfaces[0]
+
+    def get_IP_address(self):
+        return self.interfaces[0].IP_address
+
+    def send_message(self, dest_IP, message_string):
+
+
         Network.network.create_messageTCP(self.static_id, dest_id, message_string)
 
 

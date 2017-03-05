@@ -10,7 +10,8 @@ class LLInterface(object):
     #MAC addresses start from 1.  0 is the broadcast address.
     static_MAC = 1
 
-    def __init__(self):
+    def __init__(self, node):
+        self.node = node
         self.output_LL_queue = NQueue()
         self.MAC_address = LLInterface.static_MAC
         LLInterface.static_MAC += 1
@@ -119,8 +120,8 @@ class NLInterface (LLInterface):
     "The idea here is that the NL queues are to hold IP Datagrams only.  Outgoing datagrams are converted to frames" \
     "before being put into the LL output queue (somewhere).  Incoming frames are immediately converted to IP datagrams and put into the" \
     "input NL queue on receipt by a network layer interface."
-    def __init__(self):
-        LLInterface.__init__(self)
+    def __init__(self, node):
+        LLInterface.__init__(self, node)
         self.IP_address = NLInterface.static_IP
         NLInterface.static_IP += 1
         self.input_NL_queue = NQueue()

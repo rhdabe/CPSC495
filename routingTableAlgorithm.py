@@ -29,7 +29,9 @@ def routingTables(network):
 
             tables[node] = table
 
-    #This contains "routing tables" for switches as well, which we need to remove from the result.
+    # This contains "routing tables" for switches as well, which we need to remove from the result.
+    # Also, will change Dest_node field from a Node reference to an IP address,
+    # and replace next_node entries by several entries, one for each network layer interface that node possesses.
     only_router_tables = {}
 
     for node in tables:
@@ -45,7 +47,7 @@ def routingTables(network):
                 # and get the interfaces from the connection...
                 con_interfaces = next_connection.interfaces
                 # so we can determine which interface goes from this node to the next node
-                next_interface = con_interfaces[0] if con_interfaces[0] == node.node_id else con_interfaces[1]
+                next_interface = con_interfaces[0] if con_interfaces[0].node.node_id == node.node_id else con_interfaces[1]
                 for interface in dest_node.interfaces.values():
                     # for every interface on the destination node, add an entry to the forwarding table
                     # which specifies next_interface as the one to send traffic out on.

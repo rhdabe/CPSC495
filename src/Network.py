@@ -1,15 +1,22 @@
-from Segments.Segment import *
-from Segments.Header import *
-from Segments.IPDatagram import IPDatagram
-from Segments.EthernetFrame import EthernetFrame
+from RSegments.Segment import *
+from RSegments.IPDatagram import *
+from RSegments.EthernetFrame import *
 from Packet import Packet
 from Connection import Connection
-import Node
+from Node import Node, Host
 
 class Network:
     def __init__(self):
+        # indexed by node_id
         self.nodes = {}
+
+        #indexed by host IP address
+        self.hosts = {}
+
+        #indexed by a unique tuple of node_ids.  See get_node_pair_id
         self.connections = {}
+
+        #indexed by packet_id
         self.packets = {}
 
     def add_node(self, node):
@@ -18,24 +25,29 @@ class Network:
         """
         self.nodes[node.node_id] = node
 
+        if isinstance(node, Host):
+            self.hosts[node.get_IP_address()] = node
+
     def get_node_pair_id(self, n1_id, n2_id):
         return (n1_id, n2_id) if n1_id <= n2_id else (n2_id, n1_id)
 
-    def create_messageUDP(self, startID, endID, messageString):
-
+    def create_messageUDP(self, startIP, endIP, messageString):
+        startID = self.hosts[startIP].node_id
+        endID = self.hosts[startIP].node_id
         segment = UDPSegment(UDPHeader(startID, endID, 0), messageString)
         self.create_message(startID, endID, segment)
 
-
-    def create_messageTCP(self, startID, endID, messageString):
-
+    def create_messageTCP(self, startIP, endIP, messageString):
+        startID = self.hosts[startIP].node_id
+        endID = self.hosts[startIP].node_id
         segment = TCPSegment(TCPHeader(startID, endID, 0), messageString)
         self.create_message(startID, endID, segment)
 
-
-    def create_message(self, startID, endID, UDP_TCP_segment):
-        ip_datagram = IPDatagram(Header(startID,endID,0), UDP_TCP_segment)
-        eth_frame = EthernetFrame(Header(startID, endID, 0), ip_datagram)
+    def create_message(self, startIP, endIP, UDP_TCP_segment):
+        startID = self.hosts[startIP].node_id
+        endID = self.hosts[startIP].node_id
+        ip_datagram = IPDatagram(IPHeader(startIP,endIP,0), UDP_TCP_segment)
+        eth_frame = EthernetFrame(EthernetHeader(startIP, endIP), ip_datagram)
         self.add_packet(Packet(self.nodes[startID], eth_frame))
 
         
@@ -118,6 +130,6 @@ class Network:
 def network_init():
     global network
     network = Network()
-    Node.Node.static_id=0
+    Node.static_id=0
     Connection.static_id=0
     Packet.static_packet_id = 0

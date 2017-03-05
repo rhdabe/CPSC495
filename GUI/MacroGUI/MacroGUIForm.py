@@ -484,7 +484,6 @@ class Ui_MainWindow(object):
 
     def rebuildFrameMainGraphics(self):
 
-        #TODO fix this so it replaces selected nodes/connections with their selected graphics.
         for x in self.nodes.keys():
             self.placeNodeGraphic(self.nodes[x])
 
@@ -492,8 +491,6 @@ class Ui_MainWindow(object):
             connection = src.Network.network.get_connection(node1ID, node2ID)
             self.placeConnectionGraphic(connection.connection_id, connection.connectionType,
                                         self.nodes[node1ID], self.nodes[node2ID])
-
-         #TODO this may need to change later too (if it needs to be a dictionary instead)
 
         #TODO fix and test this.
         #This code is to delete connections if one of their nodes is deleted.
@@ -515,7 +512,8 @@ class Ui_MainWindow(object):
         y1 = int(nodePosition[1])
 
         self.lblNode = NodeLabel(self.frameMain)
-        self.lblNode.setMainWindow(self)
+        self.lblNode.setUIMainWindow(self)
+        self.lblNode.setMainWindow(self.thisMainWindow)
         self.lblNode.setGeometry(x1, y1, 41, 31)
         self.lblNode.setText(_fromUtf8(""))
         self.lblNode.nodeObject = aNode
@@ -665,32 +663,36 @@ class NodeLabel(QtGui.QLabel):
     # Warning: This class has a secret variable called nodeObject which references the simulation node to which
     # this label corresponds.
 
-    def setMainWindow(self, mw):
-        self.mainWindow = mw
+    def setMainWindow(self, mainWindow):
+        # This is the QWidget which is the parent for the TableWindow associated with this node.
+        self.mainWindow = mainWindow
+
+    def setUIMainWindow(self, mw):
+        # This is the UI_MainWindow object that displays all the UI stuff.
+        self.UImainWindow = mw
 
     def mouseDoubleClickEvent(self, ev):
-        print "double click event"
-
-        self.window = TableWindow(QtGui.QMainWindow(), self.nodeObject)
+        self.mousePressEvent(ev)
+        self.window = TableWindow(QtGui.QMainWindow(self.mainWindow), self.nodeObject)
 
     def mousePressEvent(self, ev):
         # TODO add Shift + Click for multiple selection
 
-        if self.mainWindow.isNodeSelected(self.nodeObject):
-            self.mainWindow.selectedNodes.pop(self.nodeObject.getIDInt())
+        if self.UImainWindow.isNodeSelected(self.nodeObject):
+            self.UImainWindow.selectedNodes.pop(self.nodeObject.getIDInt())
         else:
-            self.mainWindow.selectedNodes[self.nodeObject.getIDInt()] = self.nodeObject
+            self.UImainWindow.selectedNodes[self.nodeObject.getIDInt()] = self.nodeObject
 
         self.highlightSelected()
 
-        self.mainWindow.checkModifyNode()
-        self.mainWindow.checkDeleteNodes()
-        self.mainWindow.checkModifyConnection()
-        self.mainWindow.checkAddConnection()
+        self.UImainWindow.checkModifyNode()
+        self.UImainWindow.checkDeleteNodes()
+        self.UImainWindow.checkModifyConnection()
+        self.UImainWindow.checkAddConnection()
 
 
     def highlightSelected(self):
-        if self.mainWindow.isNodeSelected(self.nodeObject):
+        if self.UImainWindow.isNodeSelected(self.nodeObject):
             if self.nodeObject.getType() == "Host":
                 self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/pc_hl.png")))
             elif self.nodeObject.getType() == "Router":
