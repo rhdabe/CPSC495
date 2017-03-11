@@ -132,9 +132,17 @@ class SendMessage_Window(object):
     def send_message(self):
         # Use this for sending the standard string to the network/nodes.
         # Send message to the toNode.
-        if self.TCPradioButton.isChecked():
-            message = "TCP TO: " + str(self.toComboBox.currentText()) + " FROM: " + str(self.fromComboBox.currentText())
-            src.Network.network.create_messageTCP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
+
+        UDP = self.UDPradioButton.isChecked();
+        dest_IP = self.toComboBox.currentText()
+        src_IP = self.fromComboBox.currentText()
+        message = ""
+
+        if UDP:
+            message += "UDP TO: "
         else:
-            message = "UDP TO: " + str(self.toComboBox.currentText()) + " FROM: " + str(self.fromComboBox.currentText())
-            src.Network.network.create_messageUDP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
+            message += "TCP TO: "
+
+        message += str(dest_IP) + " FROM: " + str(src_IP)
+
+        src.Network.network.hosts[int(dest_IP)].send_message(int(src_IP), message, UDP)

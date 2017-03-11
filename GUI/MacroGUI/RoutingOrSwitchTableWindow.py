@@ -38,7 +38,7 @@ class TableWindow(object):
         self.setupUi()
 
     def setupUi(self):
-        self.MainWindow.setObjectName(_fromUtf8("MsgWindow"))
+        self.MainWindow.setObjectName(_fromUtf8("TableWindow"))
         self.MainWindow.resize(200, 200)
         self.centralwidget = QtGui.QWidget(self.MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))

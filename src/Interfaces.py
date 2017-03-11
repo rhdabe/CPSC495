@@ -118,8 +118,8 @@ class NLInterface (LLInterface):
     static_IP = 1
 
     "The idea here is that the NL queues are to hold IP Datagrams only.  Outgoing datagrams are converted to frames" \
-    "before being put into the LL output queue (somewhere).  Incoming frames are immediately converted to IP datagrams and put into the" \
-    "input NL queue on receipt by a network layer interface."
+    "before being put into the LL output queue.  Incoming frames are immediately converted to IP datagrams"\
+    "and put into the input NL queue on receipt by a network layer interface."
     def __init__(self, node):
         LLInterface.__init__(self, node)
         self.IP_address = NLInterface.static_IP

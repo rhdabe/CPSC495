@@ -1,8 +1,8 @@
 class EthernetHeader:
     length = 8 # bits
     def __init__(self, src, dst):
-        assert 1 < src < 16, "ERROR: source MAC is a 4 bit number excluding 0"
-        assert 0 < dst < 16, "ERROR: destination MAC is a 4 bit number including 0 (broadcast)"
+        assert 1 <= src < 16, "ERROR: source MAC is a 4 bit number excluding 0"
+        assert 0 <= dst < 16, "ERROR: destination MAC is a 4 bit number including 0 (broadcast)"
         self.src_MAC = src
         self.dest_MAC = dst
 
