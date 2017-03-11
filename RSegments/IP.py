@@ -1,6 +1,4 @@
 
-import EthernetFrame
-
 class IPHeader:
     length = 16 # bits
 

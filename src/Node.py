@@ -1,5 +1,5 @@
-from RSegments.EthernetFrame import *
-from RSegments.IPDatagram import *
+from RSegments.Ethernet import *
+from RSegments.IP import *
 import Network
 from Interfaces import LLInterface, NLInterface
 import random
@@ -91,9 +91,15 @@ class Switch(Node):
         return newInterface
 
     def send(self):
-        self.transmit_LL_interfaces()
+        self.switch_send()
 
     def receive(self):
+        self.switch_receive()
+
+    def switch_send(self):
+        self.transmit_LL_interfaces()
+
+    def switch_receive(self):
         self.read_LL_interfaces()
 
     def transmit_LL_interfaces(self):
@@ -188,10 +194,6 @@ class Router(Switch):
         # ARP table format: ["IP" : {"MAC" : #, "TTL" : #} }
         self.ARP_table = {}
 
-        # List of packets waiting on ARP replies.  Used to prevent this router from ARP spamming.
-        self.ARP_list = []
-
-
     def new_interface(self):
         newInterface = NLInterface(self)
         self.interfaces[self.local_interface_id] = newInterface
@@ -199,9 +201,17 @@ class Router(Switch):
         return newInterface
 
     def send(self):
-        self.process_output_queues()
+        self.router_send()
 
     def receive(self):
+        self.router_receive()
+
+    def router_send(self):
+        self.switch_send()
+        self.process_output_queues()
+
+    def router_receive(self):
+        self.switch_receive()
         self.process_input_queues()
 
     def process_output_queues(self):
@@ -242,27 +252,13 @@ class Router(Switch):
 
     def forward_IP_datagram(self, queue):
         # I'm working with an interface queue here because later I may change to finite queues, in which case, the
-        # output queue might be full and so dequeuing the packet way back at the begining of processing would be
+        # output queue might be full and so dequeuing the packet way back at the beginning of processing would be
         # the wrong thing to do.  The decision should be made here as to whether forwarding actually happens.
         datagram = queue.peek_last()
         dest_IP = datagram.get_dest_IP()
 
         next_interface = self.next_hop(dest_IP)
         next_interface.output_NL_queue.enqueue(queue.dequeue())
-
-    def make_ARP_frame(self, src_IP, dest_IP, src_MAC):
-        ARP_datagram = IPDatagram(IPHeader(src_IP, self.dest_IP))
-        ARP_frame = EthernetFrame(EthernetHeader(src_MAC, Router.ARP_MAC), Router.ARP_payload)
-        return ARP_frame
-
-    def is_ARP_packet(self, frame):
-        datagram = frame.IP_datagram
-        return isinstance(frame, EthernetFrame) and datagram.header.dest_IP == Router.ARP_IP \
-            and datagram.payload == Router.ARP_payload
-
-    def process_ARP_packet(self, datagram):
-        datagram.dest_IP = datagram.get_src_IP()
-        datagram.src_IP = self.IP_address
 
     def next_hop(self, dest_IP):
         # Returns next IP address according to this router's routing table.
@@ -326,6 +322,33 @@ class Host(Router):
     def __init__(self):
         Router.__init__(self)
         self.new_interface()
+        self.messages = []
+
+    def process_datagram(self, queue, incoming_interface_id):
+        # I'm working with an interface queue here because later I may change to finite queues, in which case, the
+        # output queue might be full and so dequeuing the packet way back at the begining of processing would be
+        # the wrong thing to do.  That decision should be made in the forward_IP_datagram method.
+
+        datagram = queue.peek_last()
+        # Packets could be intended for this router, and not a host, in a real network (control stuff)
+        # If the datagram is destined for some other IP
+        if not datagram.get_dest_IP() == self.IP_address:
+            self.forward_IP_datagram(queue)
+        else:
+            if self.is_ARP_packet(datagram):
+                self.process_ARP_packet(queue)
+            else:
+                payload = datagram.payload
+                assert isinstance(payload,UDPSegment) or isinstance(payload, TCPSegment), \
+                    "ERROR: datagram payload %s is not UDP or TCP instance" % str(payload)
+                self.messages.append(datagram.payload)
+
+    def receive(self):
+        self.router_receive()
+        for message in self.messages:
+            print "Message received:"
+            print str(message.header)
+            print message.message
 
     def get_protocol_header(self, message):
         return message.header

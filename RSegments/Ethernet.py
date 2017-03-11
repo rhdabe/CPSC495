@@ -1,3 +1,4 @@
+from IP import *
 class EthernetHeader:
     length = 8 # bits
     def __init__(self, src, dst):
@@ -13,7 +14,7 @@ class EthernetHeader:
 class EthernetFrame:
     def __init__(self, header, datagram):
         #TODO put this back sometime maybe.
-        #assert isinstance(datagram, IPDatagram), "ERROR: %s is not an IPDatagram " % datagram
+        assert isinstance(datagram, IPDatagram), "ERROR: %s is not an IPDatagram " % datagram
         assert isinstance(header, EthernetHeader), "ERROR: %s is not an EthernetHeader" % header
         self.header = header
         self.IP_datagram = datagram

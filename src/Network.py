@@ -1,6 +1,4 @@
-from RSegments.Segment import *
-from RSegments.IPDatagram import *
-from RSegments.EthernetFrame import *
+
 from Packet import Packet
 from Connection import Connection
 from Node import Node, Host

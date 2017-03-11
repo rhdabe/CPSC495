@@ -4,8 +4,8 @@ import sys
 from PyQt4.Qt import *
 from Node import *
 from Connection import *
-from RSegments.EthernetFrame import *
-from RSegments.IPDatagram import *
+from RSegments.Ethernet import *
+from RSegments.IP import *
 
 
 class Frame:

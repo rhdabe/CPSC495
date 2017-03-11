@@ -1,6 +1,6 @@
 from Segment import Segment
 
-"""IPDatagram.py:  IPDatagram class that has both a Segment object and a IP header"""
+"""IP.py:  IPDatagram class that has both a Segment object and a IP header"""
 __author__ = "Ryan Paulitschke"
 __version__ = "1.0.0"
 

@@ -8,6 +8,7 @@ from PyQt4.QtGui import *
 from src.Connection import *
 from src.Node import *
 from MessageInfoWindow import MessageInfo_Window
+from RSegments.EthernetFrame import *
 
 try:
     _fromUtf8 = QString.fromUtf8
@@ -314,7 +315,7 @@ class MicroHostFrame(QFrame):
         MainWindow = QMainWindow(self)
         qqq = EthernetFrame("relevant info",
                             IPDatagram("relevant data", UDPSegment(UDPHeader(80, 80, 7777), "Hello World")))
-        self.btnHostA.setDisabled(False);
+        self.btnHostA.setDisabled(False)
         #ui = MessageInfo_Window(MainWindow, qqq, "Transport")
         self.myHolder.lineList[0].setActive(False)
         if self.myHolder.list_size > 2:

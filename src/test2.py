@@ -1,8 +1,12 @@
 
-from src.Node import *
+list = {}
+other = list
 
-if isinstance(Host(), Router):
-    print "Host is a Router"
+other[1] = "hi"
+
+print list
+print other
+
 
 def init():
     global globvar

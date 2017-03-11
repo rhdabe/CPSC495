@@ -1,6 +1,6 @@
 from NQueue import NQueue
-from RSegments.IPDatagram import *
-from RSegments.EthernetFrame import *
+from RSegments.IP import *
+from RSegments.Ethernet import *
 class LLInterface(object):
     # TODO for now use infinite queues.  Later will set queue size.
     # TODO apparently switch interfaces can send and receive at the same time... maybe figure that out later.
@@ -117,6 +117,7 @@ class NLInterface (LLInterface):
     # TODO could implement using bitwise operators and keep IP addresses as integer values.
     static_IP = 1
 
+
     "The idea here is that the NL queues are to hold IP Datagrams only.  Outgoing datagrams are converted to frames" \
     "before being put into the LL output queue.  Incoming frames are immediately converted to IP datagrams"\
     "and put into the input NL queue on receipt by a network layer interface."
@@ -126,6 +127,10 @@ class NLInterface (LLInterface):
         NLInterface.static_IP += 1
         self.input_NL_queue = NQueue()
         self.output_NL_queue = NQueue()
+        self.ARP_table = node.ARP_table
+
+        # List of packets waiting on ARP replies.  Used to prevent this router from ARP spamming.
+        self.ARP_list = []
 
     def shut_down(self):
         # Signals the end of an incoming frame.
@@ -139,4 +144,37 @@ class NLInterface (LLInterface):
         # command from switch to send a frame
         self.output_NL_queue.add(datagram)
 
+    def process_output_queue(self):
 
+        if not self.output_NL_queue.isEmpty():
+
+            datagram = self.output_NL_queue.peek_last()
+            dest_IP = datagram.get_dest_IP()
+            dest_MAC = self.ARP_table.get(dest_IP, False)
+
+            if isinstance(dest_MAC, (int, long)):
+                # If we know the MAC address associated with the destination IP, then encapsulate and send.
+                self.output_LL_queue.enqueue(EthernetFrame(EthernetHeader(self.MAC_address, dest_MAC), self.output_NL_queue.dequeue()))
+            else:
+                if not self.ARP_list.__contains__(datagram):
+                    # If we do not know, and aren't already waiting for an ARP reply, we must leave the IPDatagram
+                    # in the queue, and enact ARP.
+                    arp_frame = self.make_ARP_frame(self.IP_address, dest_IP, self.MAC_address)
+                    self.send_frame(arp_frame)
+                    self.ARP_list.append(datagram)
+                #else:
+                    # If this packet is already waiting on an ARP reply, don't send another one.
+
+    def make_ARP_frame(self, src_IP, dest_IP, src_MAC):
+        ARP_datagram = IPDatagram(IPHeader(src_IP, dest_IP), self.node.ARP_payload)
+        ARP_frame = EthernetFrame(EthernetHeader(src_MAC, self.node.ARP_MAC), ARP_datagram)
+        return ARP_frame
+
+    def is_ARP_packet(self, frame):
+        datagram = frame.IP_datagram
+        return isinstance(frame, EthernetFrame) and datagram.header.dest_IP == self.node.ARP_IP \
+               and datagram.payload == self.node.ARP_payload
+
+    def process_ARP_packet(self, datagram):
+        datagram.dest_IP = datagram.get_src_IP()
+        datagram.src_IP = self.IP_address
