@@ -84,29 +84,6 @@ class Switch(Node):
         # Used to uniquely index the interfaces in the interfaces table.
         self.local_interface_id = 0
 
-        # TODO This will not work.  Must transmit from all switches first, and then read from all switches.  Two passes.
-        '''
-             Switch processing should occur in this order:
-
-             This Switch processes all frames on interfaces with a set received flag.
-                 Filter frames, or forward them on to their next interface.
-             This Switch transmits on all interfaces with outgoing packets.
-                 (In LLInterface: If a transmission is completed, free up this interface.)
-             This Switch reads on all interfaces with incoming packets.
-                 (In LLInterface: One more bit is read on each interface from their connection
-                 If a packet read is completed, set self.frame = the complete frame, and set received flag)
-
-        '''
-
-    def get_pretty_switch_table(self):
-
-        string = "{Desination MAC : Outgoing Interface ID [Interface MAC address]}\n"
-
-        for MAC, int_id in self.interfaces.iteritems():
-            string += str(MAC) + ":" + str(int_id) +  "[" + str(self.interfaces[int_id].MAC_address) + "]\n"
-
-        return string
-
     def new_interface(self):
         newInterface = LLInterface(self)
         self.interfaces[self.local_interface_id] = newInterface
@@ -187,6 +164,14 @@ class Switch(Node):
         #TODO the length of the header shouldn't be zero?
         return EthernetFrame(EthernetHeader(self.static_id, destination_id, 0), message)
 
+    def get_pretty_switch_table(self):
+
+        string = "{Desination MAC : Outgoing Interface ID [Interface MAC address]}\n"
+
+        for MAC, int_id in self.interfaces.iteritems():
+            string += str(MAC) + ":" + str(int_id) +  "[" + str(self.interfaces[int_id].MAC_address) + "]\n"
+        return string
+
 class Router(Switch):
     # TODO: all network entities should include a step() function which performs the necessary operations to move them
     # TODO: ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
@@ -208,8 +193,6 @@ class Router(Switch):
 
 
     def new_interface(self):
-
-        # Each link layer interface in this Router has an associated input queue, and output queue.
         newInterface = NLInterface(self)
         self.interfaces[self.local_interface_id] = newInterface
         self.local_interface_id += 1
@@ -261,7 +244,7 @@ class Router(Switch):
         # I'm working with an interface queue here because later I may change to finite queues, in which case, the
         # output queue might be full and so dequeuing the packet way back at the begining of processing would be
         # the wrong thing to do.  The decision should be made here as to whether forwarding actually happens.
-
+        datagram = queue.peek_last()
         dest_IP = datagram.get_dest_IP()
 
         next_interface = self.next_hop(dest_IP)
@@ -286,11 +269,17 @@ class Router(Switch):
         return self.routing_table[dest_IP]
 
     def get_pretty_routing_table(self):
-        print "get pretty routing table", self.routing_table
 
         string = "{Destination IP Address : Next IP Address}"
         for dest_IP, next_interface in self.routing_table.iteritems():
             string += str(dest_IP) + " : " + str(next_interface.IP_address) + "\n"
+
+        return string
+
+    def get_pretty_arp_table(self):
+        string = "{Destination IP Address : Destination MAC Address}"
+        for dest_IP, dest_MAC in self.arp_table.iteritems():
+            string += str(dest_IP) + " : " + str(dest_MAC) + "\n"
 
         return string
 
