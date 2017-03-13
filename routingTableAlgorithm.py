@@ -39,20 +39,20 @@ def routingTables(network):
         if isinstance(node, Router):
             # for each router in the graph
             for dest_node in tables[node]:
-                # for each destination node in this node's routing table
-                # look up the next node...
-                next_node = tables[node][dest_node]
-                # to look up the connection between this node and the next node...
-                next_connection = (Network.network.connections[Network.network.get_node_pair_id(node.node_id, next_node.node_id)])
-                # and get the interfaces from the connection...
-                con_interfaces = next_connection.interfaces
-                # so we can determine which interface goes from this node to the next node
-                next_interface = con_interfaces[0] if con_interfaces[0].node.node_id == node.node_id else con_interfaces[1]
-                for interface in dest_node.interfaces.values():
-                    # for every interface on the destination node, add an entry to the forwarding table
-                    # which specifies next_interface as the one to send traffic out on.
-                    only_router_tables[node][interface.IP_address] = next_interface
-
+                if isinstance(dest_node, Router):
+                    # for each destination node in this node's routing table
+                    # look up the next node...
+                    next_node = tables[node][dest_node]
+                    # to look up the connection between this node and the next node...
+                    next_connection = (Network.network.connections[Network.network.get_node_pair_id(node.node_id, next_node.node_id)])
+                    # and get the interfaces from the connection...
+                    con_interfaces = next_connection.interfaces
+                    # so we can determine which interface goes from this node to the next node
+                    next_interface = con_interfaces[0] if con_interfaces[0].node.node_id == node.node_id else con_interfaces[1]
+                    for interface in dest_node.interfaces.values():
+                        # for every interface on the destination node, add an entry to the forwarding table
+                        # which specifies next_interface as the one to send traffic out on.
+                        only_router_tables[node][interface.IP_address] = next_interface
     return only_router_tables
 
 def shortest_paths(graph):

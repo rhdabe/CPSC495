@@ -28,8 +28,14 @@ class IPDatagram:
     def get_src_IP(self):
         return self.header.src_IP
 
+    def set_src_IP(self, s):
+        self.header.src_IP = s
+
     def get_dest_IP(self):
         return self.header.dest_IP
+
+    def set_dest_IP(self, d):
+        self.header.dest_IP = d
 
     def get_bit_string(self):
         return str(self.header) + self.IP_datagram

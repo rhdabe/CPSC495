@@ -51,6 +51,8 @@ class Connection:
     def connect2(self, interface1, interface2):
         # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
         self.interfaces = [interface1, interface2]
+        interface1.connect(self)
+        interface2.connect(self)
 
     def disconnect(self, interface):
         self.interfaces.remove(interface)
@@ -71,6 +73,8 @@ class Connection:
         other.wake_up()
 
     def shut_down(self, sending_interface):
+        # TODO this cheats by sending the frame over in the shut_down method because bit parsing isn't implemented
         other = self.other_interface(sending_interface)
         print "shutting down interface with MAC", other.MAC_address
-        other.shut_down()
+
+        other.shut_down(sending_interface.frame)

@@ -78,13 +78,13 @@ class TableWindow(object):
 
 
         if self.node.getType() == "Host":
-            MainWindow.setWindowTitle(_translate("MainWindow", "Host Routing Table", None))
+            MainWindow.setWindowTitle(_translate("MainWindow", "Host Info", None))
             text += "Host IP address: " + str(simNode.interfaces[0].IP_address) + "\n"
             self.toLabel.setText(_translate("MainWindow", text + simNode.get_pretty_routing_table(), None))
         elif self.node.getType() == "Router":
-            MainWindow.setWindowTitle(_translate("MainWindow", "Router Routing Table", None))
+            MainWindow.setWindowTitle(_translate("MainWindow", "Router Info", None))
             self.toLabel.setText(_translate("MainWindow", text + simNode.get_pretty_routing_table(), None))
         elif self.node.getType() == "Switch":
-            MainWindow.setWindowTitle(_translate("MainWindow", "Switch Table", None))
+            MainWindow.setWindowTitle(_translate("MainWindow", "Switch Info", None))
             self.toLabel.setText(_translate("MainWindow", text + simNode.get_pretty_switch_table(), None))
 

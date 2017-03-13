@@ -24,15 +24,11 @@ class LLInterface(object):
         self.next_bit = 0  # index of next bit to be transmitted from self.bit_string
 
     def connect(self, connection):
+        print "interface connected to", connection
         self.connection = connection
-        connection.connect1(self)
 
     def disconnect(self, connection):
-        self.connection.disconnect(self)
         self.connection = None
-
-    def set_frame(self, frame):
-        self.frame = frame
 
     def send_frame(self, frame):
         # command from switch to send a frame
@@ -101,26 +97,27 @@ class LLInterface(object):
 
     def wake_up(self):
         # Signals the beginning of an incoming frame.
-        print"I'm MAC", self.MAC_address, "and I'm awake!"
+        print"I'm LLInterface with MAC", self.MAC_address, "and I'm awake!"
         self.active = True
         self.receiving = True
 
-    def shut_down(self):
+    def shut_down(self, f):
         # Signals the end of an incoming frame.
-        print"I'm MAC", self.MAC_address, "and I'm asleep!"
+        print"I'm LLInterface with MAC", self.MAC_address, "and I'm asleep!"
         self.active = False
         self.receiving = False
         self.received = True
+        self.frame = f
 
 class NLInterface (LLInterface):
     # TODO this is flat IP.  Consider making it hierarchical.
     # TODO could implement using bitwise operators and keep IP addresses as integer values.
     static_IP = 1
 
+    ARP_MAC = 0
+    ARP_payload = 'ARP'
+    DEFAULT_ARP_TTL = 20
 
-    "The idea here is that the NL queues are to hold IP Datagrams only.  Outgoing datagrams are converted to frames" \
-    "before being put into the LL output queue.  Incoming frames are immediately converted to IP datagrams"\
-    "and put into the input NL queue on receipt by a network layer interface."
     def __init__(self, node):
         LLInterface.__init__(self, node)
         self.IP_address = NLInterface.static_IP
@@ -132,12 +129,12 @@ class NLInterface (LLInterface):
         # List of packets waiting on ARP replies.  Used to prevent this router from ARP spamming.
         self.ARP_list = []
 
-    def shut_down(self):
+    def shut_down(self, frame):
         # Signals the end of an incoming frame.
-        print"I'm MAC", self.MAC_address, "and I'm asleep!"
+        print "I'm NLInterface MAC", self.MAC_address, "and I'm asleep!"
         self.receiving = False
         self.received = True
-        self.input_NL_queue.enqueue(self.frame.IP_datagram)
+        self.input_NL_queue.enqueue(frame)
 
     def send_datagram(self, datagram):
         assert isinstance(datagram, IPDatagram), "ERROR: %s is not an IPDatagram" % datagram
@@ -147,34 +144,83 @@ class NLInterface (LLInterface):
     def process_output_queue(self):
 
         if not self.output_NL_queue.isEmpty():
-
-            datagram = self.output_NL_queue.peek_last()
+            frame = self.output_NL_queue.peek_head()
+            datagram = frame.IP_datagram
             dest_IP = datagram.get_dest_IP()
-            dest_MAC = self.ARP_table.get(dest_IP, False)
+            # Passing through a router means moving to a new subnet.
+            # Thus, a new dest_MAC address is needed which is either in the ARP table, or else needs to be queried via
+            #  ARP.  The src_MAC also must be updated to the MAC address of this interface.
 
-            if isinstance(dest_MAC, (int, long)):
-                # If we know the MAC address associated with the destination IP, then encapsulate and send.
-                self.output_LL_queue.enqueue(EthernetFrame(EthernetHeader(self.MAC_address, dest_MAC), self.output_NL_queue.dequeue()))
+            dest_dict = self.ARP_table.get(dest_IP, {})
+
+            dest_MAC = dest_dict.get("MAC", -1) if dest_dict != {} else -1
+
+            if dest_MAC != -1:
+                # If we know the MAC address associated with the destination IP, then send,
+                # updating both the dest_MAC and src_MAC fields of the EthernetFrame
+                frame.src_MAC = self.MAC_address
+                frame.dest_MAC = dest_MAC
+                self.send_frame(self.output_NL_queue.dequeue())
             else:
-                if not self.ARP_list.__contains__(datagram):
+                if not self.ARP_list.__contains__(frame):
                     # If we do not know, and aren't already waiting for an ARP reply, we must leave the IPDatagram
                     # in the queue, and enact ARP.
+                    print "Sending ARP query"
                     arp_frame = self.make_ARP_frame(self.IP_address, dest_IP, self.MAC_address)
                     self.send_frame(arp_frame)
-                    self.ARP_list.append(datagram)
-                #else:
-                    # If this packet is already waiting on an ARP reply, don't send another one.
+                    self.ARP_list.append(frame)
 
-    def make_ARP_frame(self, src_IP, dest_IP, src_MAC):
-        ARP_datagram = IPDatagram(IPHeader(src_IP, dest_IP), self.node.ARP_payload)
-        ARP_frame = EthernetFrame(EthernetHeader(src_MAC, self.node.ARP_MAC), ARP_datagram)
-        return ARP_frame
+            #   else: If this packet is already waiting on an ARP reply, don't send another one.
 
     def is_ARP_packet(self, frame):
-        datagram = frame.IP_datagram
-        return isinstance(frame, EthernetFrame) and datagram.header.dest_IP == self.node.ARP_IP \
-               and datagram.payload == self.node.ARP_payload
+        return frame.IP_datagram.payload == NLInterface.ARP_payload
 
-    def process_ARP_packet(self, datagram):
-        datagram.dest_IP = datagram.get_src_IP()
-        datagram.src_IP = self.IP_address
+    '''either returns the ARP packet to sender with this interface's MAC address as the src_MAC
+        or else updates the ARP table stored in the Router to which this interface belongs.'''
+    def process_ARP_packet(self):
+        print "Processing ARP packet"
+        # This method assumes that the ARP packet is at the head of this interface's input queue.
+        frame = self.input_NL_queue.dequeue()
+        src_IP = frame.IP_datagram.get_src_IP()
+
+        if self.is_ARP_reply(frame):
+            print "updating ARP table"
+            self.ARP_table[src_IP] = {}
+            self.ARP_table[src_IP]["MAC"] = frame.src_MAC
+            self.ARP_table[src_IP]["TTL"] = NLInterface.DEFAULT_ARP_TTL
+
+        elif self.is_ARP_query(frame):
+            print "replying to ARP query"
+            sender_MAC = frame.get_src_MAC()
+
+            frame.set_dest_MAC(frame.get_src_MAC())
+            frame.set_src_MAC(self.MAC_address)
+            datagram = frame.IP_datagram
+
+            sender_IP = datagram.get_src_IP()
+
+            self.ARP_table[sender_IP] = {}
+            self.ARP_table[sender_IP]["MAC"] = sender_MAC
+            self.ARP_table[sender_IP]["TTL"] = NLInterface.DEFAULT_ARP_TTL
+
+            datagram.set_dest_IP(datagram.get_src_IP())
+            datagram.set_src_IP(self.IP_address)
+            self.output_NL_queue.enqueue(frame)
+
+            # update this node's ARP table
+
+    def is_ARP_query(self, frame):
+        datagram = frame.IP_datagram
+        return isinstance(frame, EthernetFrame) and frame.header.dest_MAC == NLInterface.ARP_MAC \
+               and datagram.payload == NLInterface.ARP_payload
+
+    def is_ARP_reply(self, frame):
+        datagram = frame.IP_datagram
+        return isinstance(frame, EthernetFrame) and frame.header.dest_MAC != NLInterface.ARP_MAC \
+               and datagram.payload == NLInterface.ARP_payload
+
+    '''constructs an ARP ethernet frame to be sent out over the network'''
+    def make_ARP_frame(self, src_IP, dest_IP, src_MAC):
+        ARP_datagram = IPDatagram(IPHeader(src_IP, dest_IP), NLInterface.ARP_payload)
+        ARP_frame = EthernetFrame(EthernetHeader(src_MAC, NLInterface.ARP_MAC), ARP_datagram)
+        return ARP_frame

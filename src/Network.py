@@ -2,6 +2,7 @@
 from Packet import Packet
 from Connection import Connection
 from Node import Node, Host
+from Interfaces import *
 
 class Network:
     def __init__(self):
@@ -22,6 +23,9 @@ class Network:
         add a node to the network
         """
         self.nodes[node.node_id] = node
+
+        print "Network add_node:  nodes:"
+        print self.nodes
 
         if isinstance(node, Host):
             self.hosts[node.get_IP_address()] = node
@@ -133,3 +137,5 @@ def network_init():
     Node.static_id=0
     Connection.static_id=0
     Packet.static_packet_id = 0
+    LLInterface.static_MAC = 1
+    NLInterface.static_IP = 1

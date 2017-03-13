@@ -55,7 +55,8 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
 
-        self.MsgWindow = QtGui.QMainWindow(MainWindow)
+        self.MsgWindow = None
+        self.MsgTemplate = QtGui.QMainWindow(MainWindow)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.thisMainWindow = MainWindow
@@ -187,9 +188,9 @@ class Ui_MainWindow(object):
         self.dockSCContents = QtGui.QWidget()
         self.dockSCContents.setObjectName(_fromUtf8("dockSCContents"))
         #TODO this button is not necessary.  start_simulation() should be called immediately on startup.
-        self.btnStart = QtGui.QPushButton(self.dockSCContents)
-        self.btnStart.setGeometry(QtCore.QRect(0, 0, 50, 23))
-        self.btnStart.setObjectName(_fromUtf8("btnStartButton"))
+        self.btnRestart = QtGui.QPushButton(self.dockSCContents)
+        self.btnRestart.setGeometry(QtCore.QRect(0, 0, 50, 23))
+        self.btnRestart.setObjectName(_fromUtf8("btnStartButton"))
         self.btnNext = QtGui.QPushButton(self.dockSCContents)
         self.btnNext.setGeometry(QtCore.QRect(55, 0, 50, 23))
         self.btnNext.setObjectName(_fromUtf8("btnNextButton"))
@@ -245,7 +246,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addNode)
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteSelectedNodes)
         QtCore.QObject.connect(self.btnModifyNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.modifyNode)
-        QtCore.QObject.connect(self.btnStart, QtCore.SIGNAL(_fromUtf8("clicked()")), self.startSimulation)
+        QtCore.QObject.connect(self.btnRestart, QtCore.SIGNAL(_fromUtf8("clicked()")), self.restartSimulation)
         QtCore.QObject.connect(self.btnNext, QtCore.SIGNAL(_fromUtf8("clicked()")), self.stepSimulation)
         QtCore.QObject.connect(self.btnPause, QtCore.SIGNAL(_fromUtf8("clicked()")), self.pauseSimulation)
         QtCore.QObject.connect(self.btnPlay, QtCore.SIGNAL(_fromUtf8("clicked()")), self.playSimulation)
@@ -285,7 +286,7 @@ class Ui_MainWindow(object):
         # self.actionSave.setText(_translate("MainWindow", "Save", None))
         # self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
         self.actionExit.setText(_translate("MainWindow", "Exit", None))
-        self.btnStart.setText(_translate("MainWindow", "Start", None))
+        self.btnRestart.setText(_translate("MainWindow", "Restart", None))
         self.btnNext.setText(_translate("MainWindow", "Next", None))
         self.btnPlay.setText(_translate("MainWindow", "Play", None))
         self.btnPause.setText(_translate("MainWindow", "Pause", None))
@@ -294,7 +295,7 @@ class Ui_MainWindow(object):
         self.btnMsg.setText(_translate("MainWindow", "Messages", None))
 
         #Added so I don't have to click the start button EVERY time I want to test something.
-        self.startSimulation()
+        self.restartSimulation()
 
     # I cannot figure out how to put these calls elsewhere yet so will need to copy each time .ui file is recreated
 
@@ -317,7 +318,7 @@ class Ui_MainWindow(object):
     def addNode(self):
         # Create the GUI node
         thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
-        self.nodes[int(thisNode.getUniqueID())] = thisNode
+        self.nodes[thisNode.getIDInt()] = thisNode
         self.placeNodeGraphic(thisNode)
 
         # Create the simulation node
@@ -615,12 +616,23 @@ class Ui_MainWindow(object):
         self.linConnection.show()
 
 
-    def startSimulation(self):
+    def restartSimulation(self):
         print "startSimulation"
         if not self.simulation_started:
             self.simulation_started = True
 
         src.Network.network_init()
+        self.nodes = {}
+        self.selectedNodes = {}
+        self.connections = []
+        self.selectedConnections = []
+
+        Node.static_id = 0
+
+
+
+        self.clearAndRepaint()
+
 
     def stepSimulation(self):
         print "stepSimulation"
@@ -650,7 +662,7 @@ class Ui_MainWindow(object):
             node.routing_table = tables[node]
 
     def openMsgWindow(self):  # Method to open button window
-        self.MsgWindow = SendMessage_Window(self.MsgWindow)
+        self.MsgWindow = SendMessage_Window(self.MsgTemplate)
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
                                self.MsgWindow.refreshDropdowns)
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")),

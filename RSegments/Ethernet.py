@@ -19,9 +19,19 @@ class EthernetFrame:
         self.header = header
         self.IP_datagram = datagram
 
+    def set_src_MAC(self, sm):
+        self.header.src_MAC = sm
+
     def get_src_MAC(self):
         return self.header.src_MAC
 
+    def set_dest_MAC(self, dm):
+        self.header.dest_MAC = dm
+
     def get_dest_MAC(self):
         return self.header.dest_MAC
+
+    def get_bit_string(self):
+        # TODO make this really work!!!
+        return "101"
 
