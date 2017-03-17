@@ -1,8 +1,8 @@
 
 from Packet import Packet
 from Connection import Connection
-from Node import Node, Switch, Host
 from Interfaces import *
+import Node
 
 class Network:
     def __init__(self):
@@ -24,7 +24,7 @@ class Network:
         """
         self.nodes[node.node_id] = node
 
-        if isinstance(node, Host):
+        if isinstance(node, Node.Node.Host):
             self.hosts[node.get_IP_address()] = node
 
     def get_node_pair_id(self, n1_id, n2_id):
@@ -135,37 +135,32 @@ class Network:
         # Also, Switches need to be removed for this to work properly.
 
         done_list = []
-
         graph_copy = graph.copy()
-        print "old graph"
-        print graph_copy
         for node in graph_copy:
-            if isinstance(node, Switch):
-                for adj_node, adj_conn in graph[node].iteritems():
-                    adj_ints = adj_conn.interfaces
-                    far_int_1 = adj_ints[0] if not node.interfaces.__contains__(adj_ints[0]) else adj_ints[1]
-                    for other_adj_node, other_adj_conn in graph[node].iteritems():
-                        if other_adj_node != adj_node and other_adj_node not in done_list:
-                            oth_adj_ints = other_adj_conn.interfaces
-                            far_int_2 = oth_adj_ints[0] if not node.interfaces.__contains__(oth_adj_ints[0]) else oth_adj_ints[1]
+            done_list = []
+            if not isinstance(node, Node.Node.Router):
+                for adj_node_1, adj_conn_1 in graph_copy[node].iteritems():
+                    adj_ints = adj_conn_1.interfaces
+                    far_int_1 = adj_ints[0] if adj_ints[1] in node.interfaces.values() else adj_ints[1]
+                    for adj_node_2, adj_conn_2 in graph_copy[node].iteritems():
+                        if adj_node_2 != adj_node_1 and adj_node_2 not in done_list:
+                            oth_adj_ints = adj_conn_2.interfaces
+                            far_int_2 = oth_adj_ints[0] if oth_adj_ints[1] in node.interfaces.values() else oth_adj_ints[1]
 
-                            new_conn = Connection(None, adj_node.getLatency() + other_adj_node.getLatency())
-                            new_conn.connect2(far_int_1, far_int_2)
+                            new_conn = Connection(None, adj_conn_1.get_latency() + adj_conn_2.get_latency())
+                            new_conn.fake_connect_interfaces(far_int_1, far_int_2)
 
-                            graph[adj_node][node] = new_conn
-                            graph[other_adj_node] = new_conn
-                    del graph[adj_node][node]
+                            graph[adj_node_1][adj_node_2] = new_conn
+                            graph[adj_node_2][adj_node_1] = new_conn
 
-                    done_list.append(adj_node)
+                    dict = graph[adj_node_1]
+                    del dict[node]
+                    done_list.append(adj_node_1)
                 del graph[node]
         return graph
 
-
-
-
-
-
 def network_init():
+
     global network
     network = Network()
     Node.static_id=0

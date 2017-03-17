@@ -8,7 +8,7 @@ from PyQt4.QtGui import *
 from src.Connection import *
 from src.Node import *
 from MessageInfoWindow import MessageInfo_Window
-from RSegments.EthernetFrame import *
+from RSegments.Ethernet import *
 
 try:
     _fromUtf8 = QString.fromUtf8
@@ -655,14 +655,20 @@ if __name__ == "__main__":
     host2 = Host()
     router = Router()
     switch = Switch()
-    #con1 = Connection(host1, host2, None)
-    con1 = Connection(host1, router, None)
+
+    con1 = Connection()
     #con1 = Connection(host1, switch, None)
-    con2 = Connection(router, switch, None)
+    con2 = Connection()
     #con2 = Connection(switch, router, None)
     #con2 = Connection(router, host2, None)
-    con3 = Connection(switch, host2, None)
+    con3 = Connection()
     #con3 = Connection(router, host2, None)
+
+    con1.connect_nodes(host1, switch)
+    con2.connect_nodes(switch, router)
+    con3.connect_nodes(router, host2)
+
+
     if MicroMainWindow.isValidCombo(con1, con2, con3):
         ui = MicroMainWindow(con1, con2, con3)
     #ui = MicroMainWindow(con1, con2)

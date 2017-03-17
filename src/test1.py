@@ -36,7 +36,7 @@ class Frame:
         int2.connect(connection)
         int3 = r1.interfaces[1]
 
-        connection.connect2(int1, int2)
+        connection.connect_interfaces(int1, int2)
 
         datagram = IPDatagram(IPHeader(1,2), "01010100011010000110100101110011001000000110100101110011001000000110000100100000011001100111001001100001011011010110010100111111")
         frame = EthernetFrame(EthernetHeader(3,2), datagram)

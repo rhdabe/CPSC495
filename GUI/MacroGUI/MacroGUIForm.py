@@ -395,7 +395,7 @@ class Ui_MainWindow(object):
         simConnection = SimulationConnection.Connection(self.cboConnectionType.currentText(),
                                        int(self.txtConnectionLength.toPlainText()))
         #connect it to interfaces in each node.
-        simConnection.connect2(simNode1.new_interface(), simNode2.new_interface())
+        simConnection.connect_nodes(simNode1, simNode2)
 
         src.Network.network.add_connection(gnode1.getIDInt(), gnode2.getIDInt(), simConnection)
 
@@ -652,7 +652,8 @@ class Ui_MainWindow(object):
 
         # insert routing tables into the nodes
         for node in src.Network.network.nodes.values():
-            node.routing_table = tables[node]
+            if isinstance(node, src.Node.Router):
+                node.routing_table = tables[node]
 
     def openMsgWindow(self):  # Method to open button window
         self.MsgWindow = SendMessage_Window(self.MsgTemplate)

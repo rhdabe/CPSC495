@@ -69,6 +69,7 @@ class Node(object):
                 my_packets.append(packet)
         return my_packets
 
+
 class Switch(Node):
     DEFAULT_TTL = 100
 
@@ -109,12 +110,12 @@ class Switch(Node):
                 interface.transmit()
 
     def read_LL_interfaces(self):
-        for id, interface in self.interfaces.items():
+        for incoming_id, interface in self.interfaces.iteritems():
                 if interface.has_received():
                     frame = interface.get_frame()
-                    self.process_frame(frame, id)
+                    self.process_frame(frame, incoming_id)
                 if interface.is_receiving():
-                    print "reading on interface", id, "with MAC", interface.MAC_address
+                    print "reading on interface", incoming_id, "with MAC", interface.MAC_address
                     interface.read()
                 # else the interface is inactive. Do nothing.
 
@@ -193,7 +194,7 @@ class Router(Switch):
     '''This is overridden to remove MAC_based packet switching (self.process_frame() bit is commented out)
         and switch table stuff.'''
     def read_LL_interfaces(self):
-        for id, interface in self.interfaces.items():
+        for id, interface in self.interfaces.iteritems():
                 # if interface.has_received():
                 #    frame = interface.get_frame()
                 #    self.process_frame(frame, id)
@@ -244,10 +245,10 @@ class Router(Switch):
 
     def forward_IP_datagram(self, incoming_interface_id):
 
-        queue = self.interface[incoming_interface_id].output_NL_queue
+        queue = self.interfaces[incoming_interface_id].input_NL_queue
         dest_IP = queue.peek_head().IP_datagram.get_dest_IP()
 
-        next_interface = self.next_hop(dest_IP)
+        next_interface = self.next_hop(dest_IP)["Interface"]
         next_interface.output_NL_queue.enqueue(queue.dequeue())
 
     def next_hop(self, dest_IP):
@@ -257,8 +258,8 @@ class Router(Switch):
     def get_pretty_routing_table(self):
 
         string = "Routing Table\n{Destination IP Address : Next IP Address}\n"
-        for dest_IP, next_interface in self.routing_table.iteritems():
-            string += str(dest_IP) + " : " + str(next_interface.IP_address) + "\n"
+        for dest_IP, next_dict in self.routing_table.iteritems():
+            string += str(dest_IP) + " : " + str(next_dict["IP"]) + "\n"
 
         return string
 
@@ -277,7 +278,7 @@ class Host(Router):
         self.messages = []
 
     def read_LL_interfaces(self):
-        for id, interface in self.interfaces.items():
+        for id, interface in self.interfaces.iteritems():
                 # if interface.has_received():
                 #     frame = interface.get_frame()
                 #     self.process_frame(frame, id)
@@ -300,7 +301,7 @@ class Host(Router):
         # If the datagram is destined for some other IP
         if dest_IP != interface.IP_address:
             if not (interface.is_ARP_packet(frame)):
-                self.forward_IP_datagram(queue)
+                self.forward_IP_datagram(incoming_interface_id)
             else:
                 queue.dequeue()
         else:

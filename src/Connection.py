@@ -56,16 +56,26 @@ class Connection:
             return True
         return False
 
-    def connect1(self, interface):
+    def connect_interface(self, interface):
         # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
         if len(self.interfaces) < 2:
             self.interfaces.append(interface)
 
-    def connect2(self, interface1, interface2):
+    def connect_nodes(self, node1, node2):
+        interface1 = node1.new_interface()
+        interface2 = node2.new_interface()
+        self.connect_interfaces(interface1, interface2)
+
+    def connect_interfaces(self, interface1, interface2):
         # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
         self.interfaces = [interface1, interface2]
         interface1.connect(self)
         interface2.connect(self)
+
+    '''This method is used to create pseudo connections for reducing the network graph prior to routing table
+        calculation'''
+    def fake_connect_interfaces(self, interface1, interface2):
+        self.interfaces = [interface1, interface2]
 
     def disconnect(self, interface):
         self.interfaces.remove(interface)

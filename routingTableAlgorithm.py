@@ -13,9 +13,6 @@ def routingTables(network):
 
     graph = network.get_better_graph()
 
-    print "graph"
-    print graph
-
     paths = shortest_paths(graph)
     for node in graph.keys():
         table = {}
@@ -46,8 +43,8 @@ def routingTables(network):
                     # for each destination node in this node's routing table
                     # look up the next node...
                     next_node = tables[node][dest_node]
-                    # to look up the connection between this node and the next node...
-                    next_connection = (Network.network.connections[Network.network.get_node_pair_id(node.node_id, next_node.node_id)])
+                    # to look up the (possibly imaginary) connection between this node and the next node...
+                    next_connection = graph[node][next_node]
                     # and get the interfaces from the connection...
                     con_interfaces = next_connection.interfaces
                     # so we can determine which interface goes from this node to the next node
@@ -58,7 +55,7 @@ def routingTables(network):
                         # for every interface on the destination node, add an entry to the forwarding table
                         # which specifies next_interface as the one to send traffic out on.
                         only_router_tables[node][interface.IP_address] = {"Interface": output_interface, "IP": receiving_IP}
-    print only_router_tables
+
 
     return only_router_tables
 

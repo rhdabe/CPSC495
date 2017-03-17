@@ -109,7 +109,8 @@ def start_simulation(network, function=simStep, updateInterval=-1, numLoops = -1
 
     #insert routing tables into the nodes
     for node in network.nodes.values():
-        node.routing_table = tables[node]
+        if isinstance(node, src.Node.Router):
+            node.routing_table = tables[node]
 
     thread = SimThread(function, args=network, updateInterval=updateInterval, numLoops = numLoops)
     thread.start()
