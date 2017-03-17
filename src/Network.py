@@ -1,7 +1,7 @@
 
 from Packet import Packet
 from Connection import Connection
-from Node import Node, Host
+from Node import Node, Switch, Host
 from Interfaces import *
 
 class Network:
@@ -23,9 +23,6 @@ class Network:
         add a node to the network
         """
         self.nodes[node.node_id] = node
-
-        print "Network add_node:  nodes:"
-        print self.nodes
 
         if isinstance(node, Host):
             self.hosts[node.get_IP_address()] = node
@@ -72,7 +69,9 @@ class Network:
         """
         remove a node by id
         """
+
         try:
+            node = self.nodes[node_id]
             del self.nodes[node_id]
             for c_id in self.connections.keys():
                 if node_id in c_id:
@@ -80,8 +79,10 @@ class Network:
             for p_id, packet in self.packets.iteritems():
                 if node_id == packet.current_node.node_id:
                     del self.packets[p_id]
-            # for node in self.nodes.values():
-            #     if not self.get_connected_nodes(node): self.remove_node(node.node_id)
+
+            if isinstance(node, Host):
+                del self.hosts[node.interfaces[0].IP_address]
+
             return True
         except:
             return False
@@ -120,16 +121,49 @@ class Network:
         return graph
 
     def get_better_graph(self):
-        #Need to include the actual node and connection objects.
-        #This will allow me to replace node_id's by interface IP addresses in the table
+        # Need to include the actual node and connection objects.
+        # This will allow me to replace node_id's by interface IP addresses in the table
         #quite easily.
+
         graph = {}
         for node in self.nodes.values():
             graph_node = {}
-            for connection in self.get_connected_nodes(node.node_id):
-                graph_node[self.nodes[connection["node"]]] = connection["connection"]
+            for connected in self.get_connected_nodes(node.node_id):
+                graph_node[self.nodes[connected["node"]]] = connected["connection"]
             graph[node] = graph_node
+
+        # Also, Switches need to be removed for this to work properly.
+
+        done_list = []
+
+        graph_copy = graph.copy()
+        print "old graph"
+        print graph_copy
+        for node in graph_copy:
+            if isinstance(node, Switch):
+                for adj_node, adj_conn in graph[node].iteritems():
+                    adj_ints = adj_conn.interfaces
+                    far_int_1 = adj_ints[0] if not node.interfaces.__contains__(adj_ints[0]) else adj_ints[1]
+                    for other_adj_node, other_adj_conn in graph[node].iteritems():
+                        if other_adj_node != adj_node and other_adj_node not in done_list:
+                            oth_adj_ints = other_adj_conn.interfaces
+                            far_int_2 = oth_adj_ints[0] if not node.interfaces.__contains__(oth_adj_ints[0]) else oth_adj_ints[1]
+
+                            new_conn = Connection(None, adj_node.getLatency() + other_adj_node.getLatency())
+                            new_conn.connect2(far_int_1, far_int_2)
+
+                            graph[adj_node][node] = new_conn
+                            graph[other_adj_node] = new_conn
+                    del graph[adj_node][node]
+
+                    done_list.append(adj_node)
+                del graph[node]
         return graph
+
+
+
+
+
 
 def network_init():
     global network

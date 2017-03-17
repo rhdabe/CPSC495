@@ -348,8 +348,6 @@ class Ui_MainWindow(object):
             for connection in self.connections:
                 if connection.__contains__(node_id): self.connections.remove(connection)
 
-        #TODO recompute routing tables
-
         self.clearAndRepaint()
 
     def isNodeSelected(self, node):
@@ -363,6 +361,7 @@ class Ui_MainWindow(object):
     def checkAddNode(self):
         #TODO finish this
         pass
+
     def checkDeleteNodes(self):
         if len(self.selectedNodes) > 0: self.btnDeleteNode.setEnabled(True)
         else: self.btnDeleteNode.setEnabled(False)
@@ -371,23 +370,17 @@ class Ui_MainWindow(object):
         #Checking of whether node modification is allowed is handled by enabling/disabling btnModifyNode.
         #(called from NodeLabel.mousePressedEvent())
         #This method should not be called other than by the pressing of said button.
-        #TODO consider adding an exception in the case not exactly one node is selected when we get to here
 
         #"Modify" GUI node (Remove old node and create new one with the new characteristics.  Necessary because
         #                 simulation nodes must be handled this way, and therefore so too must GUI nodes
         #                 otherwise their id's will no longer match.)
-        #TODO This sort of nonsense is a good case for consolidating the two nodes into a single class. Consider it.
         self.deleteSelectedNodes()
         self.addNode()
 
         self.clearAndRepaint()
 
     def addConnection(self):
-
-        #TODO consider adding an exception in the case not exactly two nodes are selected when we get here
-        #TODO consider adding multiple connections when multiple nodes are selected
-        #Easiest would be to make a complete graph out of the selected nodes.
-
+        # This function will only be called if exactly two nodes are selected when the add connection button is pressed.
         selectedNodes = self.selectedNodes.values()
 
         gnode1 = selectedNodes[0]
@@ -416,14 +409,14 @@ class Ui_MainWindow(object):
 
     def deleteSelectedConnections(self):
         for connection in self.selectedConnections:
-            #remove GUI connection
+            # remove GUI connection
             self.connections.remove(connection)
-            #remove simulation connection
+            # remove simulation connection
             del(src.Network.network.connections[connection])
 
         self.recomputeRoutingTables()
 
-        #Remove all selected connections.
+        # Remove all selected connection GUI elements.
         self.selectedConnections = []
         self.clearAndRepaint()
 

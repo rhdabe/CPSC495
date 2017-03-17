@@ -1,5 +1,7 @@
 class Connection:
     static_id = 0;
+    COAX_LATENCY = 5
+    FIBRE_LATENCY = 1
 
     #TODO remove this.
     # def __init__(self, node1, node2, type = "Coax", length= 100):
@@ -22,7 +24,18 @@ class Connection:
         self.state = 0
 
     def get_latency(self):
+
+        if self.connectionType == "Coax":
+            return Connection.COAX_LATENCY + self.connectionLength
+        elif self.connectionType == "Fibre":
+            return Connection.FIBRE_LATENCY + self.connectionLength
+        elif self.connectionType == None:
+            return self.connectionLength
+
         #TODO some sort of calc based on type and length
+
+
+
         return self.connectionLength
 
 
