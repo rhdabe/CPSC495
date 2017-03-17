@@ -16,6 +16,8 @@ import src.Connection as SimulationConnection
 from Node import *
 import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
+from RoutingOrSwitchTableWindow import TableWindow
+import routingTableAlgorithm
 # import sip
 import time
 
@@ -53,7 +55,8 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
 
-        self.MsgWindow = QtGui.QMainWindow(MainWindow)
+        self.MsgWindow = None
+        self.MsgTemplate = QtGui.QMainWindow(MainWindow)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.thisMainWindow = MainWindow
@@ -185,9 +188,9 @@ class Ui_MainWindow(object):
         self.dockSCContents = QtGui.QWidget()
         self.dockSCContents.setObjectName(_fromUtf8("dockSCContents"))
         #TODO this button is not necessary.  start_simulation() should be called immediately on startup.
-        self.btnStart = QtGui.QPushButton(self.dockSCContents)
-        self.btnStart.setGeometry(QtCore.QRect(0, 0, 50, 23))
-        self.btnStart.setObjectName(_fromUtf8("btnStartButton"))
+        self.btnRestart = QtGui.QPushButton(self.dockSCContents)
+        self.btnRestart.setGeometry(QtCore.QRect(0, 0, 50, 23))
+        self.btnRestart.setObjectName(_fromUtf8("btnStartButton"))
         self.btnNext = QtGui.QPushButton(self.dockSCContents)
         self.btnNext.setGeometry(QtCore.QRect(55, 0, 50, 23))
         self.btnNext.setObjectName(_fromUtf8("btnNextButton"))
@@ -243,7 +246,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.addNode)
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.deleteSelectedNodes)
         QtCore.QObject.connect(self.btnModifyNode, QtCore.SIGNAL(_fromUtf8("clicked()")), self.modifyNode)
-        QtCore.QObject.connect(self.btnStart, QtCore.SIGNAL(_fromUtf8("clicked()")), self.startSimulation)
+        QtCore.QObject.connect(self.btnRestart, QtCore.SIGNAL(_fromUtf8("clicked()")), self.restartSimulation)
         QtCore.QObject.connect(self.btnNext, QtCore.SIGNAL(_fromUtf8("clicked()")), self.stepSimulation)
         QtCore.QObject.connect(self.btnPause, QtCore.SIGNAL(_fromUtf8("clicked()")), self.pauseSimulation)
         QtCore.QObject.connect(self.btnPlay, QtCore.SIGNAL(_fromUtf8("clicked()")), self.playSimulation)
@@ -283,13 +286,16 @@ class Ui_MainWindow(object):
         # self.actionSave.setText(_translate("MainWindow", "Save", None))
         # self.actionSave_As.setText(_translate("MainWindow", "Save As...", None))
         self.actionExit.setText(_translate("MainWindow", "Exit", None))
-        self.btnStart.setText(_translate("MainWindow", "Start", None))
+        self.btnRestart.setText(_translate("MainWindow", "Restart", None))
         self.btnNext.setText(_translate("MainWindow", "Next", None))
         self.btnPlay.setText(_translate("MainWindow", "Play", None))
         self.btnPause.setText(_translate("MainWindow", "Pause", None))
         self.lblUpdateInterval.setText(_translate("MainWindow", "Update Interval (ms)", None))
         self.dockSimulationControls.setWindowTitle(_translate("MainWindow", "Simulation Controls", None))
         self.btnMsg.setText(_translate("MainWindow", "Messages", None))
+
+        #Added so I don't have to click the start button EVERY time I want to test something.
+        self.restartSimulation()
 
     # I cannot figure out how to put these calls elsewhere yet so will need to copy each time .ui file is recreated
 
@@ -310,12 +316,12 @@ class Ui_MainWindow(object):
             self.txtConnectionBandwidth.hide()
 
     def addNode(self):
-       #Create the GUI node
+        # Create the GUI node
         thisNode = Node(self.cboNodeType.currentText(), self.txtXPos.toPlainText(), self.txtYPos.toPlainText())
-        self.nodes[int(thisNode.getUniqueID())] = thisNode
+        self.nodes[thisNode.getIDInt()] = thisNode
         self.placeNodeGraphic(thisNode)
 
-        #Create the simulation node
+        # Create the simulation node
         self.addSimulationNode()
 
 
@@ -342,8 +348,6 @@ class Ui_MainWindow(object):
             for connection in self.connections:
                 if connection.__contains__(node_id): self.connections.remove(connection)
 
-        #TODO recompute routing tables
-
         self.clearAndRepaint()
 
     def isNodeSelected(self, node):
@@ -357,6 +361,7 @@ class Ui_MainWindow(object):
     def checkAddNode(self):
         #TODO finish this
         pass
+
     def checkDeleteNodes(self):
         if len(self.selectedNodes) > 0: self.btnDeleteNode.setEnabled(True)
         else: self.btnDeleteNode.setEnabled(False)
@@ -365,80 +370,53 @@ class Ui_MainWindow(object):
         #Checking of whether node modification is allowed is handled by enabling/disabling btnModifyNode.
         #(called from NodeLabel.mousePressedEvent())
         #This method should not be called other than by the pressing of said button.
-        #TODO consider adding an exception in the case not exactly one node is selected when we get to here
 
         #"Modify" GUI node (Remove old node and create new one with the new characteristics.  Necessary because
         #                 simulation nodes must be handled this way, and therefore so too must GUI nodes
         #                 otherwise their id's will no longer match.)
-        #TODO This sort of nonsense is a good case for consolidating the two nodes into a single class. Consider it.
         self.deleteSelectedNodes()
         self.addNode()
 
         self.clearAndRepaint()
 
     def addConnection(self):
-
-        #TODO consider adding an exception in the case not exactly two nodes are selected when we get here
-        #TODO consider adding multiple connections when multiple nodes are selected
-        #Easiest would be to make a complete graph out of the selected nodes.
-
+        # This function will only be called if exactly two nodes are selected when the add connection button is pressed.
         selectedNodes = self.selectedNodes.values()
 
-        node1 = selectedNodes[0]
-        node2 = selectedNodes[1]
+        gnode1 = selectedNodes[0]
+        gnode2 = selectedNodes[1]
+        simNode1 = src.Network.network.nodes[gnode1.getIDInt()]
+        simNode2 = src.Network.network.nodes[gnode2.getIDInt()]
 
         #Add simulation connection
         simNodes = src.Network.network.nodes
-        simConnection = SimulationConnection.Connection(simNodes[node1.getIDInt()], simNodes[node2.getIDInt()],
-                                       self.cboConnectionType.currentText(),
-                                       int(self.txtConnectionLength.toPlainText()))
 
-        src.Network.network.add_connection(node1.getIDInt(), node2.getIDInt(), simConnection)
+        #create the connection
+        simConnection = SimulationConnection.Connection(self.cboConnectionType.currentText(),
+                                       int(self.txtConnectionLength.toPlainText()))
+        #connect it to interfaces in each node.
+        simConnection.connect_nodes(simNode1, simNode2)
+
+        src.Network.network.add_connection(gnode1.getIDInt(), gnode2.getIDInt(), simConnection)
 
         #Add GUI connection
-        nodeTuple = src.Network.network.get_node_pair_id(node1.getIDInt(), node2.getIDInt())
+        nodeTuple = src.Network.network.get_node_pair_id(gnode1.getIDInt(), gnode2.getIDInt())
         self.connections.append(nodeTuple)
-        self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, node1, node2)
+        self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, gnode1, gnode2)
 
-
-
-        #Darren's code
-        #TODO remove this
-        # tooMany = False
-        # numNodes = 0
-        #
-        # for x in range(len(self.nodes)):
-        #     if self.nodes[x].isSelected and numNodes == 0:
-        #         node1 = self.nodes[x]
-        #         numNodes = numNodes + 1
-        #     elif self.nodes[x].isSelected and numNodes == 1:
-        #         node2 = self.nodes[x]
-        #         numNodes = numNodes + 1
-        #     elif self.nodes[x].isSelected and numNodes == 2:
-        #         tooMany = True
-        #     x = x + 1
-        #
-        # if not tooMany and numNodes == 2:
-        #     connection = Connection(node1, node2, self.txtConnectionBandwidth.toPlainText())
-        #     connection.connectionType = self.cboConnectionType.currentText()
-        #     connection.connectionLength = self.txtConnectionLength.toPlainText()
-        #     connection.connectionBandWidth = self.txtConnectionBandwidth.toPlainText()
-        #     self.connections.append(connection)
-        #
-        #     self.placeConnectionGraphic(connection.connection_id, connection.connectionType, node1, node2)
-        # elif tooMany:
-        #     print "Cant select more than 2 nodes before attempting to create a connection"
-        # else:
-        #     print "Must select 2 nodes before attempting to create a connection"
+        # Recompute routing tables to account for new connection
+        self.recomputeRoutingTables()
 
     def deleteSelectedConnections(self):
         for connection in self.selectedConnections:
-            #remove GUI connection
+            # remove GUI connection
             self.connections.remove(connection)
-            #remove simulation connection
+            # remove simulation connection
             del(src.Network.network.connections[connection])
 
-        #Remove all selected connections.
+        self.recomputeRoutingTables()
+
+        # Remove all selected connection GUI elements.
         self.selectedConnections = []
         self.clearAndRepaint()
 
@@ -477,14 +455,9 @@ class Ui_MainWindow(object):
             else: selectedFlags[node] = False
 
             self.selectedNodes[node] = self.nodes[node]
-        print "Before:"
-        print src.Network.network.connections
 
         self.deleteSelectedConnections()
         self.addConnection()
-
-        print "After:"
-        print src.Network.network.connections
 
         # remove the nodes from the selected nodes list to regain consistency with GUI.
         for node in node_ids:
@@ -505,7 +478,6 @@ class Ui_MainWindow(object):
 
     def rebuildFrameMainGraphics(self):
 
-        #TODO fix this so it replaces selected nodes/connections with their selected graphics.
         for x in self.nodes.keys():
             self.placeNodeGraphic(self.nodes[x])
 
@@ -513,8 +485,6 @@ class Ui_MainWindow(object):
             connection = src.Network.network.get_connection(node1ID, node2ID)
             self.placeConnectionGraphic(connection.connection_id, connection.connectionType,
                                         self.nodes[node1ID], self.nodes[node2ID])
-
-         #TODO this may need to change later too (if it needs to be a dictionary instead)
 
         #TODO fix and test this.
         #This code is to delete connections if one of their nodes is deleted.
@@ -536,7 +506,8 @@ class Ui_MainWindow(object):
         y1 = int(nodePosition[1])
 
         self.lblNode = NodeLabel(self.frameMain)
-        self.lblNode.setMainWindow(self)
+        self.lblNode.setUIMainWindow(self)
+        self.lblNode.setMainWindow(self.thisMainWindow)
         self.lblNode.setGeometry(x1, y1, 41, 31)
         self.lblNode.setText(_fromUtf8(""))
         self.lblNode.nodeObject = aNode
@@ -638,36 +609,54 @@ class Ui_MainWindow(object):
         self.linConnection.show()
 
 
-    def startSimulation(self):
+    def restartSimulation(self):
         print "startSimulation"
         if not self.simulation_started:
             self.simulation_started = True
 
         src.Network.network_init()
+        self.nodes = {}
+        self.selectedNodes = {}
+        self.connections = []
+        self.selectedConnections = []
+
+        Node.static_id = 0
+
+
+
+        self.clearAndRepaint()
+
 
     def stepSimulation(self):
         print "stepSimulation"
-
-        #TODO and self.simulation_paused
-        if self.simulation_started :
+        if self.simulation_started and self.simulation_paused:
+            # time.sleep() accepts time in seconds.  Spinner displays in ms.
             interval = float(self.updateIntervalSpinner.value()) / 1000.0
             self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval,
                                                                      numLoops=1)
-
     def playSimulation(self):
         print "playSimulation"
         self.simulation_paused = False
         #time.sleep() accepts time in seconds.  Spinner displays in ms.
         interval = float(self.updateIntervalSpinner.value()) / 1000.0
-        self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval, numLoops=1)
+        self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval)
 
     def pauseSimulation(self):
         print"pauseSimulation"
         self.simulation_paused = True
         self.simulation_thread.end()
 
+    def recomputeRoutingTables(self):
+        # compute routing tables for each router and host
+        tables = routingTableAlgorithm.routingTables(src.Network.network)
+
+        # insert routing tables into the nodes
+        for node in src.Network.network.nodes.values():
+            if isinstance(node, src.Node.Router):
+                node.routing_table = tables[node]
+
     def openMsgWindow(self):  # Method to open button window
-        self.MsgWindow = SendMessage_Window(self.MsgWindow)
+        self.MsgWindow = SendMessage_Window(self.MsgTemplate)
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
                                self.MsgWindow.refreshDropdowns)
         QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
@@ -677,30 +666,39 @@ class Ui_MainWindow(object):
 
 class NodeLabel(QtGui.QLabel):
 
-    def setMainWindow(self, mw):
-        self.mainWindow = mw
+    # Warning: This class has a secret variable called nodeObject which references the simulation node to which
+    # this label corresponds.
+
+    def setMainWindow(self, mainWindow):
+        # This is the QWidget which is the parent for the TableWindow associated with this node.
+        self.mainWindow = mainWindow
+
+    def setUIMainWindow(self, mw):
+        # This is the UI_MainWindow object that displays all the UI stuff.
+        self.UImainWindow = mw
 
     def mouseDoubleClickEvent(self, ev):
-        print "double click event"
+        self.mousePressEvent(ev)
+        self.window = TableWindow(QtGui.QMainWindow(self.mainWindow), self.nodeObject)
 
     def mousePressEvent(self, ev):
         # TODO add Shift + Click for multiple selection
 
-        if self.mainWindow.isNodeSelected(self.nodeObject):
-            self.mainWindow.selectedNodes.pop(self.nodeObject.getIDInt())
+        if self.UImainWindow.isNodeSelected(self.nodeObject):
+            self.UImainWindow.selectedNodes.pop(self.nodeObject.getIDInt())
         else:
-            self.mainWindow.selectedNodes[self.nodeObject.getIDInt()] = self.nodeObject
+            self.UImainWindow.selectedNodes[self.nodeObject.getIDInt()] = self.nodeObject
 
         self.highlightSelected()
 
-        self.mainWindow.checkModifyNode()
-        self.mainWindow.checkDeleteNodes()
-        self.mainWindow.checkModifyConnection()
-        self.mainWindow.checkAddConnection()
+        self.UImainWindow.checkModifyNode()
+        self.UImainWindow.checkDeleteNodes()
+        self.UImainWindow.checkModifyConnection()
+        self.UImainWindow.checkAddConnection()
 
 
     def highlightSelected(self):
-        if self.mainWindow.isNodeSelected(self.nodeObject):
+        if self.UImainWindow.isNodeSelected(self.nodeObject):
             if self.nodeObject.getType() == "Host":
                 self.setPixmap(QtGui.QPixmap(_fromUtf8("../Resources/pc_hl.png")))
             elif self.nodeObject.getType() == "Router":

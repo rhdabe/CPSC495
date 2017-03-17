@@ -1,6 +1,6 @@
 from IPDatagram import IPDatagram
 
-"""EthernetFrame.py: EthernetFrame class that has both a frame header and an IPDatagram """
+"""Ethernet.py: EthernetFrame class that has both a frame header and an IPDatagram """
 __author__ = "Ryan Paulitschke"
 __version__ = "1.0.0"
 

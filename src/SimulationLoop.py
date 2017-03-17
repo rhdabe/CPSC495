@@ -83,13 +83,14 @@ def simStep(network):
 
     :type network Network"""
 
-    #for testing purposes
-    print "simStep()"
-    src.StepFunctions.table_step(network)
+    print "----------------New step-----------------"
+    nodes = network.nodes.values()
 
-    # for packet in network.packets.values():
-    #     if packet.timer > 0: packet.decrement_timer()
-    #     else: packet.update_location(packet)
+    for node in nodes:
+        node.send()
+
+    for node in nodes:
+        node.receive()
 
 def start_simulation(network, function=simStep, updateInterval=-1, numLoops = -1):
     """Starts a new SimThread to run the simulation with the given global network object, function, and number of steps.
@@ -108,7 +109,8 @@ def start_simulation(network, function=simStep, updateInterval=-1, numLoops = -1
 
     #insert routing tables into the nodes
     for node in network.nodes.values():
-        node.routing_table = tables[node.node_id]
+        if isinstance(node, src.Node.Router):
+            node.routing_table = tables[node]
 
     thread = SimThread(function, args=network, updateInterval=updateInterval, numLoops = numLoops)
     thread.start()

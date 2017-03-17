@@ -1,15 +1,21 @@
-from Segments.Segment import *
-from Segments.Header import *
-from Segments.IPDatagram import IPDatagram
-from Segments.EthernetFrame import EthernetFrame
+
 from Packet import Packet
 from Connection import Connection
+from Interfaces import *
 import Node
 
 class Network:
     def __init__(self):
+        # indexed by node_id
         self.nodes = {}
+
+        #indexed by host IP address
+        self.hosts = {}
+
+        #indexed by a unique tuple of node_ids.  See get_node_pair_id
         self.connections = {}
+
+        #indexed by packet_id
         self.packets = {}
 
     def add_node(self, node):
@@ -18,25 +24,32 @@ class Network:
         """
         self.nodes[node.node_id] = node
 
+        if isinstance(node, Node.Node.Host):
+            self.hosts[node.get_IP_address()] = node
+
     def get_node_pair_id(self, n1_id, n2_id):
         return (n1_id, n2_id) if n1_id <= n2_id else (n2_id, n1_id)
 
-    def create_messageUDP(self, startID, endID, messageString):
-
-        segment = UDPSegment(UDPHeader(startID, endID, 0), messageString)
-        self.create_message(startID, endID, segment)
-
-
-    def create_messageTCP(self, startID, endID, messageString):
-
-        segment = TCPSegment(TCPHeader(startID, endID, 0), messageString)
-        self.create_message(startID, endID, segment)
-
-
-    def create_message(self, startID, endID, UDP_TCP_segment):
-        ip_datagram = IPDatagram(Header(startID,endID,0), UDP_TCP_segment)
-        eth_frame = EthernetFrame(Header(startID, endID, 0), ip_datagram)
-        self.add_packet(Packet(self.nodes[startID], eth_frame))
+    # def create_messageUDP(self, startIP, endIP, messageString):
+    #     startID = self.hosts[startIP].node_id
+    #     endID = self.hosts[startIP].node_id
+    #     # TODO The IDS are not important for message creation.  Should use port numbers.  Fix this.
+    #     segment = UDPSegment(UDPHeader(startID, endID, 0), messageString)
+    #     self.create_message(startID, endID, segment)
+    #
+    # def create_messageTCP(self, startIP, endIP, messageString):
+    #     startID = self.hosts[startIP].node_id
+    #     endID = self.hosts[startIP].node_id
+    #     # TODO The IDS are not important for message creation.  Should use port numbers.  Fix this.
+    #     segment = TCPSegment(TCPHeader(startID, endID), messageString)
+    #     self.create_message(startID, endID, segment)
+    #
+    # def create_message(self, startIP, endIP, UDP_TCP_segment):
+    #     startID = self.hosts[startIP].node_id
+    #     # TODO The IDS are not important for message creation.  Should use port numbers.  Fix this.
+    #     ip_datagram = IPDatagram(IPHeader(startIP,endIP), UDP_TCP_segment)
+    #     eth_frame = EthernetFrame(EthernetHeader(startIP, endIP), ip_datagram)
+    #     self.add_packet(Packet(self.nodes[startID], eth_frame))
 
         
     def add_connection(self, n1_id, n2_id, connection):
@@ -56,7 +69,9 @@ class Network:
         """
         remove a node by id
         """
+
         try:
+            node = self.nodes[node_id]
             del self.nodes[node_id]
             for c_id in self.connections.keys():
                 if node_id in c_id:
@@ -64,8 +79,10 @@ class Network:
             for p_id, packet in self.packets.iteritems():
                 if node_id == packet.current_node.node_id:
                     del self.packets[p_id]
-            # for node in self.nodes.values():
-            #     if not self.get_connected_nodes(node): self.remove_node(node.node_id)
+
+            if isinstance(node, Host):
+                del self.hosts[node.interfaces[0].IP_address]
+
             return True
         except:
             return False
@@ -103,9 +120,51 @@ class Network:
             graph[node] = graph_node
         return graph
 
+    def get_better_graph(self):
+        # Need to include the actual node and connection objects.
+        # This will allow me to replace node_id's by interface IP addresses in the table
+        #quite easily.
+
+        graph = {}
+        for node in self.nodes.values():
+            graph_node = {}
+            for connected in self.get_connected_nodes(node.node_id):
+                graph_node[self.nodes[connected["node"]]] = connected["connection"]
+            graph[node] = graph_node
+
+        # Also, Switches need to be removed for this to work properly.
+
+        done_list = []
+        graph_copy = graph.copy()
+        for node in graph_copy:
+            done_list = []
+            if not isinstance(node, Node.Node.Router):
+                for adj_node_1, adj_conn_1 in graph_copy[node].iteritems():
+                    adj_ints = adj_conn_1.interfaces
+                    far_int_1 = adj_ints[0] if adj_ints[1] in node.interfaces.values() else adj_ints[1]
+                    for adj_node_2, adj_conn_2 in graph_copy[node].iteritems():
+                        if adj_node_2 != adj_node_1 and adj_node_2 not in done_list:
+                            oth_adj_ints = adj_conn_2.interfaces
+                            far_int_2 = oth_adj_ints[0] if oth_adj_ints[1] in node.interfaces.values() else oth_adj_ints[1]
+
+                            new_conn = Connection(None, adj_conn_1.get_latency() + adj_conn_2.get_latency())
+                            new_conn.fake_connect_interfaces(far_int_1, far_int_2)
+
+                            graph[adj_node_1][adj_node_2] = new_conn
+                            graph[adj_node_2][adj_node_1] = new_conn
+
+                    dict = graph[adj_node_1]
+                    del dict[node]
+                    done_list.append(adj_node_1)
+                del graph[node]
+        return graph
+
 def network_init():
+
     global network
     network = Network()
-    Node.Node.static_id=0
+    Node.static_id=0
     Connection.static_id=0
     Packet.static_packet_id = 0
+    LLInterface.static_MAC = 1
+    NLInterface.static_IP = 1

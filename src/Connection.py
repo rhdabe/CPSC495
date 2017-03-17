@@ -1,23 +1,49 @@
 class Connection:
     static_id = 0;
-    def __init__(self, node1, node2, type, length):
-        #Note that node1 and node2 are Node descendent instances, not node ids.
+    COAX_LATENCY = 5
+    FIBRE_LATENCY = 1
+
+    #TODO remove this.
+    # def __init__(self, node1, node2, type = "Coax", length= 100):
+    #     #Note that node1 and node2 are Node descendent instances, not node ids.
+    #     self.connection_id = Connection.static_id
+    #     Connection.static_id += 1
+    #     self.nodes = [node1, node2]
+    #     self.connectionType = type
+    #     self.connectionLength = length
+    #     self.trafficCount = 0
+
+    def __init__(self, type="Coax", length=100):
+        # Note that node1 and node2 are Node descendant instances, not node ids.
         self.connection_id = Connection.static_id
         Connection.static_id += 1
-        self.nodes = [node1, node2]
+        self.interfaces = []
         self.connectionType = type
         self.connectionLength = length
         self.trafficCount = 0
+        self.state = 0
 
     def get_latency(self):
+
+        if self.connectionType == "Coax":
+            return Connection.COAX_LATENCY + self.connectionLength
+        elif self.connectionType == "Fibre":
+            return Connection.FIBRE_LATENCY + self.connectionLength
+        elif self.connectionType == None:
+            return self.connectionLength
+
         #TODO some sort of calc based on type and length
+
+
+
         return self.connectionLength
 
-    def other_node(self, node):
-        if node == self.nodes[0]:
-            return self.nodes[1]
+
+    def other_interface(self, interface):
+        if interface == self.interfaces[0]:
+            return self.interfaces[1]
         else:
-            return self.nodes[0]
+            return self.interfaces[0]
 
     def addTraffic(self):
         self.trafficCount += 1
@@ -30,4 +56,48 @@ class Connection:
             return True
         return False
 
+    def connect_interface(self, interface):
+        # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
+        if len(self.interfaces) < 2:
+            self.interfaces.append(interface)
 
+    def connect_nodes(self, node1, node2):
+        interface1 = node1.new_interface()
+        interface2 = node2.new_interface()
+        self.connect_interfaces(interface1, interface2)
+
+    def connect_interfaces(self, interface1, interface2):
+        # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
+        self.interfaces = [interface1, interface2]
+        interface1.connect(self)
+        interface2.connect(self)
+
+    '''This method is used to create pseudo connections for reducing the network graph prior to routing table
+        calculation'''
+    def fake_connect_interfaces(self, interface1, interface2):
+        self.interfaces = [interface1, interface2]
+
+    def disconnect(self, interface):
+        self.interfaces.remove(interface)
+
+    def disconnect(self):
+        self.interfaces = []
+
+    def reconnect(self, disconnect_int, connect_int):
+        self.disconnect(disconnect_int)
+        self.connect(connect_int)
+
+    def transmit(self, bit):
+        self.state = bit
+
+    def wake_up(self, sending_interface):
+        other = self.other_interface(sending_interface)
+        print "waking up interface with MAC", other.MAC_address
+        other.wake_up()
+
+    def shut_down(self, sending_interface):
+        # TODO this cheats by sending the frame over in the shut_down method because bit parsing isn't implemented
+        other = self.other_interface(sending_interface)
+        print "shutting down interface with MAC", other.MAC_address
+
+        other.shut_down(sending_interface.frame)

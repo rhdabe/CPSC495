@@ -47,14 +47,14 @@ class SendMessage_Window(object):
         self.gridLayout.addItem(spacerItem, 1, 3, 1, 1)
         self.toComboBox = QtGui.QComboBox(self.centralwidget)
         self.toComboBox.setEditable(False)
-        self.toComboBox.setObjectName(_fromUtf8("fromComboBox"))
+        self.toComboBox.setObjectName(_fromUtf8("toComboBox"))
         self.gridLayout.addWidget(self.toComboBox, 1, 2, 1, 1)
         self.toLabel = QtGui.QLabel(self.centralwidget)
         font = QtGui.QFont()
         font.setPointSize(16)
         self.toLabel.setFont(font)
         self.toLabel.setAlignment(QtCore.Qt.AlignCenter)
-        self.toLabel.setObjectName(_fromUtf8("fromLabel"))
+        self.toLabel.setObjectName(_fromUtf8("toLabel"))
         self.gridLayout.addWidget(self.toLabel, 0, 2, 1, 1)
         # Prep the protocol radios.
         font = QtGui.QFont()
@@ -81,14 +81,14 @@ class SendMessage_Window(object):
         self.gridLayout.addItem(spacerItem1, 1, 1, 1, 1)
         self.fromComboBox = QtGui.QComboBox(self.centralwidget)
         self.fromComboBox.setEditable(False)
-        self.fromComboBox.setObjectName(_fromUtf8("toComboBox"))
+        self.fromComboBox.setObjectName(_fromUtf8("fromComboBox"))
         self.gridLayout.addWidget(self.fromComboBox, 3, 2, 1, 1)
         self.fromLabel = QtGui.QLabel(self.centralwidget)
         font = QtGui.QFont()
         font.setPointSize(16)
         self.fromLabel.setFont(font)
         self.fromLabel.setAlignment(QtCore.Qt.AlignCenter)
-        self.fromLabel.setObjectName(_fromUtf8("toLabel"))
+        self.fromLabel.setObjectName(_fromUtf8("fromLabel"))
         self.gridLayout.addWidget(self.fromLabel, 2, 2, 1, 1)
         spacerItem2 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.gridLayout.addItem(spacerItem2, 4, 2, 1, 1)
@@ -115,36 +115,34 @@ class SendMessage_Window(object):
 
     def refreshDropdowns(self):
         # TODO make this less annoying somehow: always resets to first element
-
         # TODO probably makes more sense to add another dock widget to the main window for this function
+
+
         # Clear the current dropdown information.
         self.toComboBox.clear()
         self.toComboBox.clearEditText()
         self.fromComboBox.clear()
         self.fromComboBox.clearEditText()
-        node_ids = src.Network.network.nodes.keys()
-        nodes = src.Network.network.nodes
+        hosts = src.Network.network.hosts
         # Repopulate the dropdowns with updated info from the network.
-        for node_id in node_ids:
-            if isinstance(nodes[node_id], Host):
-                self.toComboBox.addItem(_fromUtf8(str(node_id)))
-                self.fromComboBox.addItem(_fromUtf8(str(node_id)))
+        for host in hosts.values():
+            self.toComboBox.addItem(_fromUtf8(str(host.get_IP_address())))
+            self.fromComboBox.addItem(_fromUtf8(str(host.get_IP_address())))
 
     def send_message(self):
         # Use this for sending the standard string to the network/nodes.
         # Send message to the toNode.
-        if self.TCPradioButton.isChecked():
-            message = "TCP TO: " + str(self.toComboBox.currentText()) + " FROM: " + str(self.fromComboBox.currentText())
-            src.Network.network.create_messageTCP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
+
+        UDP = self.UDPradioButton.isChecked();
+        dest_IP = self.toComboBox.currentText()
+        src_IP = self.fromComboBox.currentText()
+        message = ""
+
+        if UDP:
+            message += "UDP TO: "
         else:
-            message = "UDP TO: " + str(self.toComboBox.currentText()) + " FROM: " + str(self.fromComboBox.currentText())
-            src.Network.network.create_messageUDP(int(self.toComboBox.currentText()), int(self.fromComboBox.currentText()), message)
+            message += "TCP TO: "
 
-        self.refreshDropdowns()
+        message += str(dest_IP) + " FROM: " + str(src_IP)
 
-    def getHosts(self):
-        array = []
-        for index in range(len(src.Network.nodes)):
-            if isinstance(src.Network.nodes[index], Host):
-                array.append(src.Network.nodes[index])
-        return array
+        src.Network.network.hosts[int(src_IP)].send_message(int(dest_IP), message, UDP)
