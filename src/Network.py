@@ -24,7 +24,7 @@ class Network:
         """
         self.nodes[node.node_id] = node
 
-        if isinstance(node, Node.Node.Host):
+        if isinstance(node, Node.Host):
             self.hosts[node.get_IP_address()] = node
 
     def get_node_pair_id(self, n1_id, n2_id):
@@ -138,7 +138,7 @@ class Network:
         graph_copy = graph.copy()
         for node in graph_copy:
             done_list = []
-            if not isinstance(node, Node.Node.Router):
+            if not isinstance(node, Node.Router):
                 for adj_node_1, adj_conn_1 in graph_copy[node].iteritems():
                     adj_ints = adj_conn_1.interfaces
                     far_int_1 = adj_ints[0] if adj_ints[1] in node.interfaces.values() else adj_ints[1]

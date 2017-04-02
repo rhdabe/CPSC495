@@ -146,3 +146,4 @@ class SendMessage_Window(object):
         message += str(dest_IP) + " FROM: " + str(src_IP)
 
         src.Network.network.hosts[int(src_IP)].send_message(int(dest_IP), message, UDP)
+

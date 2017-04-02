@@ -23,6 +23,8 @@ class Connection:
         self.trafficCount = 0
         self.state = 0
 
+        #hokey integration list for micro
+        self.nodes = []
     def get_latency(self):
 
         if self.connectionType == "Coax":
@@ -64,13 +66,10 @@ class Connection:
     def connect_nodes(self, node1, node2):
         interface1 = node1.new_interface()
         interface2 = node2.new_interface()
-        self.connect_interfaces(interface1, interface2)
-
-    def connect_interfaces(self, interface1, interface2):
-        # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
         self.interfaces = [interface1, interface2]
         interface1.connect(self)
         interface2.connect(self)
+        self.nodes = [node1, node2]
 
     '''This method is used to create pseudo connections for reducing the network graph prior to routing table
         calculation'''

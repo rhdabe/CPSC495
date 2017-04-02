@@ -8,16 +8,16 @@ class EthernetHeader:
         self.dest_MAC = dst
 
     def __str__(self):
-        return '{0:b}{1:b}'.format(self.src_MAC,self.dest_MAC)
+        return "src_MAC: " + str(self.src_MAC) + " dest_MAC: " + str(self.dest_MAC)
+        # return '{0:b}{1:b}'.format(self.src_MAC,self.dest_MAC)
 
 
 class EthernetFrame:
     def __init__(self, header, datagram):
-        #TODO put this back sometime maybe.
-        assert isinstance(datagram, IPDatagram), "ERROR: %s is not an IPDatagram " % datagram
-        assert isinstance(header, EthernetHeader), "ERROR: %s is not an EthernetHeader" % header
+        # assert isinstance(datagram, IPDatagram), "ERROR: %s is not an IPDatagram " % datagram
+        # assert isinstance(header, EthernetHeader), "ERROR: %s is not an EthernetHeader" % header
         self.header = header
-        self.IP_datagram = datagram
+        self.ip_datagram = datagram
 
     def set_src_MAC(self, sm):
         self.header.src_MAC = sm

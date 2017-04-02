@@ -13,13 +13,14 @@ class IPHeader:
         self.dest_IP = dst
 
     def __str__(self):
-        return '{0:b}{1:b}'.format(self.src_IP[0], self.src_IP[1], self.dest_IP[0], self.dest_IP[1])
+        return "src_IP: " + str(self.src_IP) + " dest_IP: " + str(self.dest_IP)
+        # return '{0:b}{1:b}'.format(self.src_IP[0], self.src_IP[1], self.dest_IP[0], self.dest_IP[1])
 
 
 class IPDatagram:
     def __init__(self, header, payload):
         self.header = header
-        self.payload = payload
+        self.segment = payload
 
     # default print notation when printing an IPDatagram
     def __str__(self):

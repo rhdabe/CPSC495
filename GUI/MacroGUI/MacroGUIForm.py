@@ -1,15 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file '.\QTFiles\MacroView.ui'
-#
-# Created by: PyQt4 UI code generator 4.11.4
-#
-# WARNING! All changes made in this file will be lost!
-
-__version__ = "1.0.1"
-
 from PyQt4 import QtCore, QtGui
-
+from GUI.MicroGUI.MicroWindow import MicroMainWindow
 import src.Network
 import src.Node as SimulationNode
 import src.Connection as SimulationConnection
@@ -18,8 +8,7 @@ import src.SimulationLoop as SimulationLoop
 from SendMessageWindow import SendMessage_Window
 from RoutingOrSwitchTableWindow import TableWindow
 import routingTableAlgorithm
-# import sip
-import time
+
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -56,6 +45,7 @@ class Ui_MainWindow(object):
         MainWindow.resize(805, 585)
 
         self.MsgWindow = None
+        self.MicroWindow = None
         self.MsgTemplate = QtGui.QMainWindow(MainWindow)
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
@@ -77,7 +67,7 @@ class Ui_MainWindow(object):
 
         #Node Properties QDockWidget
         self.dockNodeProperties = QtGui.QDockWidget(self.centralwidget)
-        self.dockNodeProperties.setGeometry(QtCore.QRect(580, 10, 211, 251))
+        self.dockNodeProperties.setGeometry(QtCore.QRect(580, 10, 211, 155))
         self.dockNodeProperties.setObjectName(_fromUtf8("dockNodeProperties"))
         self.dockNPContents = QtGui.QWidget()
         self.dockNPContents.setObjectName(_fromUtf8("dockNCContents"))
@@ -128,21 +118,21 @@ class Ui_MainWindow(object):
         self.txtMAC.setObjectName(_fromUtf8("txtMAC"))
         self.txtMAC.hide()
         self.btnModifyNode = QtGui.QPushButton(self.dockNPContents)
-        self.btnModifyNode.setGeometry(QtCore.QRect(80, 200, 75, 23))
+        self.btnModifyNode.setGeometry(QtCore.QRect(80, 110, 75, 23))
         self.btnModifyNode.setObjectName(_fromUtf8("btnModifyNode"))
         self.btnModifyNode.setEnabled(False)
         self.btnDeleteNode = QtGui.QPushButton(self.dockNPContents)
-        self.btnDeleteNode.setGeometry(QtCore.QRect(120, 170, 75, 23))
+        self.btnDeleteNode.setGeometry(QtCore.QRect(120, 80, 75, 23))
         self.btnDeleteNode.setObjectName(_fromUtf8("btnDeleteNode"))
         self.btnDeleteNode.setEnabled(False)
         self.btnAddNode = QtGui.QPushButton(self.dockNPContents)
-        self.btnAddNode.setGeometry(QtCore.QRect(30, 170, 75, 23))
+        self.btnAddNode.setGeometry(QtCore.QRect(30, 80, 75, 23))
         self.btnAddNode.setObjectName(_fromUtf8("btnAddNode"))
         self.dockNodeProperties.setWidget(self.dockNPContents)
 
         #Connection Properties QDockWidget
         self.dockConnectionProperties = QtGui.QDockWidget(self.centralwidget)
-        self.dockConnectionProperties.setGeometry(QtCore.QRect(560, 270, 211, 231))
+        self.dockConnectionProperties.setGeometry(QtCore.QRect(580, 175, 211, 231))
         self.dockConnectionProperties.setObjectName(_fromUtf8("dockConnectionProperties"))
         self.dockCPContents = QtGui.QWidget()
         self.dockCPContents.setObjectName(_fromUtf8("dockCPContents"))
@@ -171,19 +161,19 @@ class Ui_MainWindow(object):
         self.txtConnectionBandwidth.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtConnectionBandwidth.setObjectName(_fromUtf8("txtConnectionBandwidth"))
         self.btnModifyConnection = QtGui.QPushButton(self.dockCPContents)
-        self.btnModifyConnection.setGeometry(QtCore.QRect(60, 170, 75, 23))
+        self.btnModifyConnection.setGeometry(QtCore.QRect(80, 120, 80, 25))
         self.btnModifyConnection.setObjectName(_fromUtf8("btnModifyConnection"))
         self.btnAddConnection = QtGui.QPushButton(self.dockCPContents)
-        self.btnAddConnection.setGeometry(QtCore.QRect(40, 140, 75, 23))
+        self.btnAddConnection.setGeometry(QtCore.QRect(40, 90, 80, 25))
         self.btnAddConnection.setObjectName(_fromUtf8("btnAddConnection"))
         self.btnDeleteConnection = QtGui.QPushButton(self.dockCPContents)
-        self.btnDeleteConnection.setGeometry(QtCore.QRect(120, 140, 75, 23))
+        self.btnDeleteConnection.setGeometry(QtCore.QRect(120, 90, 80, 25))
         self.btnDeleteConnection.setObjectName(_fromUtf8("btnDeleteConnection"))
         self.dockConnectionProperties.setWidget(self.dockCPContents)
 
         # Simulation Controls QDockWidget
         self.dockSimulationControls = QtGui.QDockWidget(self.centralwidget)
-        self.dockSimulationControls.setGeometry(QtCore.QRect(550, 500, 225, 96))
+        self.dockSimulationControls.setGeometry(QtCore.QRect(580, 355, 225, 150))
         self.dockSimulationControls.setObjectName(_fromUtf8("dockSimulationControls"))
         self.dockSCContents = QtGui.QWidget()
         self.dockSCContents.setObjectName(_fromUtf8("dockSCContents"))
@@ -203,6 +193,9 @@ class Ui_MainWindow(object):
         self.btnMsg = QtGui.QPushButton(self.dockSCContents)
         self.btnMsg.setGeometry(QtCore.QRect(0, 30, 60, 23))
         self.btnMsg.setObjectName(_fromUtf8("btnMsgButton"))
+        self.btnMicroGUI = QtGui.QPushButton(self.dockSCContents)
+        self.btnMicroGUI.setGeometry(QtCore.QRect(0, 60, 60, 23))
+        self.btnMsg.setObjectName(_fromUtf8("btnMicroGUIButton"))
         self.updateIntervalSpinner = QtGui.QSpinBox(self.dockSCContents)
         self.lblUpdateInterval = QtGui.QLabel(self.dockSCContents)
         self.lblUpdateInterval.setGeometry(QtCore.QRect(65, 30, 100, 20))
@@ -252,6 +245,8 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.btnPlay, QtCore.SIGNAL(_fromUtf8("clicked()")), self.playSimulation)
         QtCore.QObject.connect(self.btnMsg, QtCore.SIGNAL(_fromUtf8("clicked()")),
                                self.openMsgWindow)  # Button to Open MSG window
+        QtCore.QObject.connect(self.btnMicroGUI, QtCore.SIGNAL(_fromUtf8("clicked()")),
+                               self.openMicroGUI)  # Button to Open MSG window
         # copy to here
 
 
@@ -293,7 +288,7 @@ class Ui_MainWindow(object):
         self.lblUpdateInterval.setText(_translate("MainWindow", "Update Interval (ms)", None))
         self.dockSimulationControls.setWindowTitle(_translate("MainWindow", "Simulation Controls", None))
         self.btnMsg.setText(_translate("MainWindow", "Messages", None))
-
+        self.btnMicroGUI.setText(_translate("MainWindow", "Micro View", None))
         #Added so I don't have to click the start button EVERY time I want to test something.
         self.restartSimulation()
 
@@ -451,7 +446,7 @@ class Ui_MainWindow(object):
         # get nodes at either end of connection and add to selected nodes so that addConnection will work.
 
         for node in node_ids:
-            if self.selectedNodes.__contains__(node): selectedFlags[node] = True
+            if node in self.selectedNodes: selectedFlags[node] = True
             else: selectedFlags[node] = False
 
             self.selectedNodes[node] = self.nodes[node]
@@ -657,10 +652,30 @@ class Ui_MainWindow(object):
 
     def openMsgWindow(self):  # Method to open button window
         self.MsgWindow = SendMessage_Window(self.MsgTemplate)
+        QtCore.QObject.connect(self.btnDeleteConnection, QtCore.SIGNAL(_fromUtf8("clicked()")),
+                               self.MsgWindow.refreshDropdowns)
+        QtCore.QObject.connect(self.btnAddConnection, QtCore.SIGNAL(_fromUtf8("clicked()")),
+                               self.MsgWindow.refreshDropdowns)
+    def openMicroGUI(self):
+        #sn = self.selectedNodes
+        sc = self.selectedConnections
+        conn = src.Network.network.connections
+        # if len(sn) == 2:
+        #     self.MicroWindow = MicroMainWindow(self.thisMainWindow, sn[0], sn[1])
+        # elif len(sn) == 3:
+        #     self.MicroWindow = MicroMainWindow(self.thisMainWindow, sn[0], sn[1], sn[2])
+        # elif len(sn) == 4:
+        #     self.MicroWindow = MicroMainWindow(self.thisMainWindow, sn[0], sn[1], sn[2], sn[3])
+        if len(sc) == 1:
+            self.MicroWindow = MicroMainWindow(self.thisMainWindow, conn[sc[0]])
+        elif len(sc) == 2:
+            self.MicroWindow = MicroMainWindow(self.thisMainWindow, conn[sc[0]], conn[sc[1]])
+        elif len(sc) == 3:
+            self.MicroWindow = MicroMainWindow(self.thisMainWindow, conn[sc[0]], conn[sc[1]], conn[sc[2]])
+
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
-                               self.MsgWindow.refreshDropdowns)
-        QtCore.QObject.connect(self.btnAddNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
-                               self.MsgWindow.refreshDropdowns)
+                               self.MicroWindow.updateState)
+
 
 
 

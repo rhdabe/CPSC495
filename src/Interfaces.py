@@ -1,6 +1,7 @@
 from NQueue import NQueue
 from RSegments.IP import *
 from RSegments.Ethernet import *
+from Packet import Packet
 class LLInterface(object):
     # TODO for now use infinite queues.  Later will set queue size.
     # TODO apparently switch interfaces can send and receive at the same time... maybe figure that out later.
@@ -59,6 +60,7 @@ class LLInterface(object):
             print "no more bits to send"
             #we're done transmitting
             self.transmitting = False
+            self.node.remove_packet(self.frame)
             self.connection.shut_down(self)
             self.bit_string = ""
             self.frame = None
@@ -108,6 +110,7 @@ class LLInterface(object):
         self.receiving = False
         self.received = True
         self.frame = f
+        self.node.add_packet(self, self.frame)
 
 class NLInterface (LLInterface):
     # TODO this is flat IP.  Consider making it hierarchical.
@@ -136,6 +139,7 @@ class NLInterface (LLInterface):
         self.receiving = False
         self.received = True
         self.input_NL_queue.enqueue(frame)
+        self.node.add_packet(self, frame)
 
     def send_datagram(self, datagram):
         assert isinstance(datagram, IPDatagram), "ERROR: %s is not an IPDatagram" % datagram
@@ -171,7 +175,7 @@ class NLInterface (LLInterface):
 
         if not self.output_NL_queue.isEmpty():
             frame = self.output_NL_queue.peek_head()
-            datagram = frame.IP_datagram
+            datagram = frame.ip_datagram
             dest_IP = datagram.get_dest_IP()
             # Passing through a router means moving to a new subnet.
             # Thus, a new dest_MAC address is needed which is either in the ARP table, or else needs to be queried via
@@ -204,13 +208,14 @@ class NLInterface (LLInterface):
                     # in the queue, and enact ARP.
                     print "IP", self.IP_address, "sending ARP query"
                     arp_frame = self.make_ARP_frame(self.IP_address, dest_IP, self.MAC_address)
+                    self.node.add_packet(self, arp_frame)
                     self.send_frame(arp_frame)
                     self.ARP_list.append(frame)
 
             #   else: If this packet is already waiting on an ARP reply, don't send another one.
 
     def is_ARP_packet(self, frame):
-        return frame.IP_datagram.payload == NLInterface.ARP_payload
+        return frame.ip_datagram.segment == NLInterface.ARP_payload
 
     '''either returns the ARP packet to sender with this interface's MAC address as the src_MAC
         or else updates the ARP table stored in the Router to which this interface belongs.'''
@@ -218,7 +223,7 @@ class NLInterface (LLInterface):
         print "IP", self.IP_address, "processing ARP packet"
         # This method assumes that the ARP packet is at the head of this interface's input queue.
         frame = self.input_NL_queue.dequeue()
-        src_IP = frame.IP_datagram.get_src_IP()
+        src_IP = frame.ip_datagram.get_src_IP()
 
         if self.is_ARP_reply(frame):
             print "IP", self.IP_address, "updating ARP table"
@@ -232,7 +237,7 @@ class NLInterface (LLInterface):
 
             frame.set_dest_MAC(frame.get_src_MAC())
             frame.set_src_MAC(self.MAC_address)
-            datagram = frame.IP_datagram
+            datagram = frame.ip_datagram
 
             sender_IP = datagram.get_src_IP()
 
@@ -243,18 +248,15 @@ class NLInterface (LLInterface):
             # update this node's ARP table
             self.ARP_table[sender_IP] = {"MAC": sender_MAC, "TTL": NLInterface.DEFAULT_ARP_TTL}
 
-
-
-
     def is_ARP_query(self, frame):
-        datagram = frame.IP_datagram
+        datagram = frame.ip_datagram
         return isinstance(frame, EthernetFrame) and frame.header.dest_MAC == NLInterface.ARP_MAC \
-               and datagram.payload == NLInterface.ARP_payload
+               and datagram.segment == NLInterface.ARP_payload
 
     def is_ARP_reply(self, frame):
-        datagram = frame.IP_datagram
+        datagram = frame.ip_datagram
         return isinstance(frame, EthernetFrame) and frame.header.dest_MAC != NLInterface.ARP_MAC \
-               and datagram.payload == NLInterface.ARP_payload
+               and datagram.segment == NLInterface.ARP_payload
 
     '''constructs an ARP ethernet frame to be sent out over the network'''
     def make_ARP_frame(self, src_IP, dest_IP, src_MAC):

@@ -5,6 +5,7 @@ from Interfaces import LLInterface, NLInterface
 import random
 from RSegments.Segment import *
 from RSegments.Header import *
+from Packet import Packet
 
 
 '''
@@ -55,19 +56,19 @@ class Node(object):
     static_id = 0
 
     def __init__(self):
-
+        self.packets = {}
         self.node_id = Node.static_id
         Node.static_id += 1
-
-    '''returns the packets whose current location is this node'''
-    def get_packets(self):
-        network = Network.network
-
-        my_packets = []
-        for packet in network.packets:
-            if packet.current_node == self.node_id:
-                my_packets.append(packet)
-        return my_packets
+    #
+    # '''returns the packets whose current location is this node'''
+    # def get_packets(self):
+    #     network = Network.network
+    #
+    #     my_packets = []
+    #     for packet in network.packets:
+    #         if packet.current_node == self.node_id:
+    #             my_packets.append(packet)
+    #     return my_packets
 
 
 class Switch(Node):
@@ -85,11 +86,28 @@ class Switch(Node):
         # Used to uniquely index the interfaces in the interfaces table.
         self.local_interface_id = 0
 
+        self.packets = {}
+
     def new_interface(self):
         newInterface = LLInterface(self)
         self.interfaces[self.local_interface_id] = newInterface
         self.local_interface_id += 1
         return newInterface
+
+    def add_packet(self, interface, frame):
+        print "Host IP", self.interfaces[0].IP_address, "adding packet", frame
+        self.packets[frame] = Packet(interface, frame)
+        print self.packets
+
+    def remove_packet(self, frame):
+        print "Host IP", self.interfaces[0].IP_address, "deleting packet", frame
+        print "packets pre-delete"
+        print self.packets
+        try:
+            del self.packets[frame]
+        except:
+            pass
+        print self.packets
 
     def send(self):
         self.switch_send()
@@ -234,7 +252,7 @@ class Router(Switch):
         interface = self.interfaces[incoming_interface_id]
         queue = interface.input_NL_queue
         frame = queue.peek_head()
-        dest_IP = queue.peek_head().IP_datagram.get_dest_IP()
+        dest_IP = queue.peek_head().ip_datagram.get_dest_IP()
 
         # If the datagram is destined for some other IP (for now, nothing talks directly to Routers, so delete if it
         # is for this Router.)
@@ -246,7 +264,7 @@ class Router(Switch):
     def forward_IP_datagram(self, incoming_interface_id):
 
         queue = self.interfaces[incoming_interface_id].input_NL_queue
-        dest_IP = queue.peek_head().IP_datagram.get_dest_IP()
+        dest_IP = queue.peek_head().ip_datagram.get_dest_IP()
 
         next_interface = self.next_hop(dest_IP)["Interface"]
         next_interface.output_NL_queue.enqueue(queue.dequeue())
@@ -295,8 +313,8 @@ class Host(Router):
         interface = self.interfaces[incoming_interface_id]
         queue = interface.input_NL_queue
         frame = queue.peek_head()
-        datagram = frame.IP_datagram
-        dest_IP = frame.IP_datagram.get_dest_IP()
+        datagram = frame.ip_datagram
+        dest_IP = frame.ip_datagram.get_dest_IP()
 
         # If the datagram is destined for some other IP
         if dest_IP != interface.IP_address:
@@ -308,7 +326,7 @@ class Host(Router):
             if interface.is_ARP_packet(frame):
                 interface.process_ARP_packet()
             else:
-                payload = frame.IP_datagram.payload
+                payload = frame.ip_datagram.segment
                 assert isinstance(payload,UDPSegment) or isinstance(payload, TCPSegment), \
                     "ERROR: datagram payload %s is not UDP or TCP instance" % str(payload)
                 # Needed to add this to datagram processing in a Host node.
@@ -352,27 +370,28 @@ class Host(Router):
     '''
     def send_message(self, dest_IP, message_string, UDP):
         # Randomly select a port number just to show that replies come back to the same port.
-        port = random.randrange(0, 10000)
+        src_port = random.randrange(0, 10000)
+        dest_port = random.randrange(0, 10000)
 
         # Select transport protocol based on use input in SendMessageWindow
         if(UDP):
-            self.create_messageUDP(self.get_IP_address, dest_IP, port, message_string)
+            self.create_messageUDP(self.get_IP_address(), dest_IP, src_port, dest_port, message_string)
         else:
-            self.create_messageTCP(self.get_IP_address, dest_IP, port, message_string)
+            self.create_messageTCP(self.get_IP_address(), dest_IP, src_port, dest_port, message_string)
 
     '''
     Create a new UDP message
     '''
-    def create_messageUDP(self, startIP, endIP, port, messageString):
+    def create_messageUDP(self, startIP, endIP, src_port, dest_port, messageString):
 
-        segment = UDPSegment(UDPHeader(port, port, 0), messageString)
+        segment = UDPSegment(UDPHeader(src_port, dest_port, 0), messageString)
         self.create_message(startIP, endIP, segment)
 
     '''
     create a new TCP message
     '''
-    def create_messageTCP(self, startIP, endIP, port, messageString):
-        segment = TCPSegment(TCPHeader(port, port, 0), messageString)
+    def create_messageTCP(self, startIP, endIP, src_port, dest_port, messageString):
+        segment = TCPSegment(TCPHeader(src_port, dest_port, 0), messageString)
         self.create_message(startIP, endIP, segment)
 
     '''encapsulate message in IP datagram and EthernetFrame then place in NL_Interface input queue to be routed'''
@@ -382,7 +401,7 @@ class Host(Router):
         # The 0 destination MAC address doesn't matter.  The correct MAC will be determined in the NL_Interface.
         frame = EthernetFrame(EthernetHeader(interface.MAC_address, 0), ip_datagram)
 
-        self.interfaces[0].output_NL_queue.enqueue(frame);
+        self.interfaces[0].output_NL_queue.enqueue(frame)
 
-        # TODO it would be useful to keep the list of packets for tracking purposes, but it doesn't work this way.
-        #self.add_packet(Packet(self.nodes[startID], eth_frame))
+        self.add_packet(self.interfaces[0], frame)
+
