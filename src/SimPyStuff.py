@@ -1,14 +1,35 @@
 import simpy
+from simpy.core import BoundClass
 from Interfaces import *
 import src.Network
 
+class DropStoreGet(simpy.resources.store.StoreGet):
+    pass
+
+class DropStorePut(simpy.resources.store.StorePut):
+    pass
+
+class PacketDropped(simpy.Event):
+    pass
+
+class PacketEncapsulated(simpy.Event):
+    pass
+
+class PacketDecapsulated(simpy.Event):
+    pass
+
 
 class DropStore(simpy.Store):
-
     def dropPut(self, item):
         if len(self.items) < self.capacity:
             self.put(item)
         # Otherwise, ignore the item.
+
+    put = BoundClass(DropStorePut)
+
+    get = BoundClass(DropStoreGet)
+
+
 
 def LL_Input_Port(env, LL_int):
    # assert isinstance(LL_int, LLInterface()) and not isinstance(LL_int, NLInterface),\
@@ -184,3 +205,12 @@ def send_frame(frame, interface):
         interface.connection.other_interface(interface).input_NL_queue.dropPut(frame)
     else: interface.connection.other_interface(interface).input_LL_queue.dropPut(frame)
 
+
+def trace_cb(event):
+    env = event.env
+    value = event.value
+    string = 'Now: %d value: %s, event: %s' % (env.now, value, event)
+
+    trace = src.Network.trace
+    trace.write(string)
+    trace.write('\n')

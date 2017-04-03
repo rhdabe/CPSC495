@@ -615,8 +615,10 @@ class Ui_MainWindow(object):
         self.connections = []
         self.selectedConnections = []
 
-        self.pauseSimulation()
+        #This is for the GUI Node, do not delete it again!
+        Node.static_id = 0
 
+        self.pauseSimulation()
         self.clearAndRepaint()
 
 

@@ -79,7 +79,7 @@ class TableWindow(object):
 
         if self.node.getType() == "Host":
             MainWindow.setWindowTitle(_translate("MainWindow", "Host Info", None))
-            text += "Host IP address: " + str(simNode.interfaces[0].IP_address) + "\n"
+            text += "Host IP address: " + str(simNode.interfaces.values()[0].IP_address) + "\n"
             self.toLabel.setText(_translate("MainWindow", text +
                                             simNode.get_pretty_routing_table() +
                                             simNode.get_pretty_arp_table(), None))

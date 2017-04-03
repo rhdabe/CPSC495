@@ -4,6 +4,7 @@ from Connection import Connection
 from Interfaces import *
 import Node
 import simpy
+import os
 
 class Network:
     def __init__(self):
@@ -57,7 +58,7 @@ class Network:
     #     eth_frame = EthernetFrame(EthernetHeader(startIP, endIP), ip_datagram)
     #     self.add_packet(Packet(self.nodes[startID], eth_frame))
 
-        
+
     def add_connection(self, n1_id, n2_id, connection):
         """
         add a connection between two nodes (by id)
@@ -165,14 +166,28 @@ class Network:
                 del graph[node]
         return graph
 
+trace = None
+env = None
+network = None
+
 def network_init():
 
     global network
     network = Network()
     global env
-    env = simpy.Environment()
-    Node.static_id = 0
+    env = simpy.Environment(trace_cb=SimPyStuff.trace_cb)
+    global trace
+
+    if trace is not None:
+        trace.close()
+        os.remove('trace')
+
+    trace = open('trace', mode='w')
+
+    Node.Node.static_id = 0
+
     Connection.static_id = 0
     Packet.static_packet_id = 0
     LLInterface.static_MAC = 1
+    LLInterface.static_ID = 0
     NLInterface.static_IP = 1
