@@ -35,6 +35,7 @@ class Ui_MainWindow(object):
         self.simulation_thread = None
         self.simulation_started = False
         self.simulation_paused = False
+        self.network_traced = False
 
         self.nodes = {}
         self.selectedNodes = {}
@@ -44,6 +45,7 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(805, 585)
 
+        self.NetworkModifyButtonCallbacks = {}
         self.MsgWindow = None
         self.MicroWindow = None
         self.MsgTemplate = QtGui.QMainWindow(MainWindow)
@@ -99,11 +101,13 @@ class Ui_MainWindow(object):
         self.txtXPos.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtXPos.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtXPos.setObjectName(_fromUtf8("txtXPos"))
+        self.txtXPos.setPlainText(_fromUtf8('100'))
         self.txtYPos = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtYPos.setGeometry(QtCore.QRect(160, 50, 51, 21))
         self.txtYPos.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtYPos.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtYPos.setObjectName(_fromUtf8("txtYPos"))
+        self.txtYPos.setPlainText(_fromUtf8('100'))
         self.frameMain.addPosition(self.txtXPos, self.txtYPos)
         self.txtIP = QtGui.QPlainTextEdit(self.dockNPContents)
         self.txtIP.setGeometry(QtCore.QRect(80, 110, 121, 21))
@@ -121,13 +125,17 @@ class Ui_MainWindow(object):
         self.btnModifyNode.setGeometry(QtCore.QRect(80, 110, 75, 23))
         self.btnModifyNode.setObjectName(_fromUtf8("btnModifyNode"))
         self.btnModifyNode.setEnabled(False)
+        self.NetworkModifyButtonCallbacks[self.btnModifyNode] = self.checkModifyNode
         self.btnDeleteNode = QtGui.QPushButton(self.dockNPContents)
         self.btnDeleteNode.setGeometry(QtCore.QRect(120, 80, 75, 23))
         self.btnDeleteNode.setObjectName(_fromUtf8("btnDeleteNode"))
         self.btnDeleteNode.setEnabled(False)
+        self.NetworkModifyButtonCallbacks[self.btnDeleteNode] = self.checkDeleteNodes
         self.btnAddNode = QtGui.QPushButton(self.dockNPContents)
         self.btnAddNode.setGeometry(QtCore.QRect(30, 80, 75, 23))
         self.btnAddNode.setObjectName(_fromUtf8("btnAddNode"))
+        self.NetworkModifyButtonCallbacks[self.btnAddNode] = None
+
         self.dockNodeProperties.setWidget(self.dockNPContents)
 
         #Connection Properties QDockWidget
@@ -163,12 +171,15 @@ class Ui_MainWindow(object):
         self.btnModifyConnection = QtGui.QPushButton(self.dockCPContents)
         self.btnModifyConnection.setGeometry(QtCore.QRect(80, 120, 80, 25))
         self.btnModifyConnection.setObjectName(_fromUtf8("btnModifyConnection"))
+        self.NetworkModifyButtonCallbacks[self.btnModifyConnection] = self.checkDeleteConnections
         self.btnAddConnection = QtGui.QPushButton(self.dockCPContents)
         self.btnAddConnection.setGeometry(QtCore.QRect(40, 90, 80, 25))
         self.btnAddConnection.setObjectName(_fromUtf8("btnAddConnection"))
+        self.NetworkModifyButtonCallbacks[self.btnAddConnection] = self.checkAddConnection
         self.btnDeleteConnection = QtGui.QPushButton(self.dockCPContents)
         self.btnDeleteConnection.setGeometry(QtCore.QRect(120, 90, 80, 25))
         self.btnDeleteConnection.setObjectName(_fromUtf8("btnDeleteConnection"))
+        self.NetworkModifyButtonCallbacks[self.btnDeleteConnection] = self.checkDeleteConnections
         self.dockConnectionProperties.setWidget(self.dockCPContents)
 
         # Simulation Controls QDockWidget
@@ -180,7 +191,8 @@ class Ui_MainWindow(object):
         #TODO this button is not necessary.  start_simulation() should be called immediately on startup.
         self.btnRestart = QtGui.QPushButton(self.dockSCContents)
         self.btnRestart.setGeometry(QtCore.QRect(0, 0, 50, 23))
-        self.btnRestart.setObjectName(_fromUtf8("btnStartButton"))
+        self.btnRestart.setObjectName(_fromUtf8("btnRestartButton"))
+        self.btnRestart.setDisabled(True)
         self.btnNext = QtGui.QPushButton(self.dockSCContents)
         self.btnNext.setGeometry(QtCore.QRect(55, 0, 50, 23))
         self.btnNext.setObjectName(_fromUtf8("btnNextButton"))
@@ -190,11 +202,14 @@ class Ui_MainWindow(object):
         self.btnPause = QtGui.QPushButton(self.dockSCContents)
         self.btnPause.setGeometry(QtCore.QRect(165, 0, 50, 23))
         self.btnPause.setObjectName(_fromUtf8("btnPauseButton"))
+        self.btnClear = QtGui.QPushButton(self.dockSCContents)
+        self.btnClear.setGeometry(QtCore.QRect(0, 30, 60, 23))
+        self.btnClear.setObjectName(_fromUtf8("btnClearButton"))
         self.btnMsg = QtGui.QPushButton(self.dockSCContents)
-        self.btnMsg.setGeometry(QtCore.QRect(0, 30, 60, 23))
+        self.btnMsg.setGeometry(QtCore.QRect(0, 60, 60, 23))
         self.btnMsg.setObjectName(_fromUtf8("btnMsgButton"))
         self.btnMicroGUI = QtGui.QPushButton(self.dockSCContents)
-        self.btnMicroGUI.setGeometry(QtCore.QRect(0, 60, 60, 23))
+        self.btnMicroGUI.setGeometry(QtCore.QRect(0, 90, 60, 23))
         self.btnMsg.setObjectName(_fromUtf8("btnMicroGUIButton"))
         self.updateIntervalSpinner = QtGui.QSpinBox(self.dockSCContents)
         self.lblUpdateInterval = QtGui.QLabel(self.dockSCContents)
@@ -243,6 +258,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.btnNext, QtCore.SIGNAL(_fromUtf8("clicked()")), self.stepSimulation)
         QtCore.QObject.connect(self.btnPause, QtCore.SIGNAL(_fromUtf8("clicked()")), self.pauseSimulation)
         QtCore.QObject.connect(self.btnPlay, QtCore.SIGNAL(_fromUtf8("clicked()")), self.playSimulation)
+        QtCore.QObject.connect(self.btnClear, QtCore.SIGNAL(_fromUtf8("clicked()")), self.clearSimulation)
         QtCore.QObject.connect(self.btnMsg, QtCore.SIGNAL(_fromUtf8("clicked()")),
                                self.openMsgWindow)  # Button to Open MSG window
         QtCore.QObject.connect(self.btnMicroGUI, QtCore.SIGNAL(_fromUtf8("clicked()")),
@@ -285,12 +301,13 @@ class Ui_MainWindow(object):
         self.btnNext.setText(_translate("MainWindow", "Next", None))
         self.btnPlay.setText(_translate("MainWindow", "Play", None))
         self.btnPause.setText(_translate("MainWindow", "Pause", None))
+        self.btnClear.setText(_translate("MainWindow", "Clear", None))
         self.lblUpdateInterval.setText(_translate("MainWindow", "Update Interval (ms)", None))
         self.dockSimulationControls.setWindowTitle(_translate("MainWindow", "Simulation Controls", None))
         self.btnMsg.setText(_translate("MainWindow", "Messages", None))
         self.btnMicroGUI.setText(_translate("MainWindow", "Micro View", None))
         #Added so I don't have to click the start button EVERY time I want to test something.
-        self.restartSimulation()
+        self.clearSimulation()
 
     # I cannot figure out how to put these calls elsewhere yet so will need to copy each time .ui file is recreated
 
@@ -352,10 +369,6 @@ class Ui_MainWindow(object):
     def checkModifyNode(self):
         if len(self.selectedNodes) == 1: self.btnModifyNode.setEnabled(True)
         else: self.btnModifyNode.setEnabled(False)
-
-    def checkAddNode(self):
-        #TODO finish this
-        pass
 
     def checkDeleteNodes(self):
         if len(self.selectedNodes) > 0: self.btnDeleteNode.setEnabled(True)
@@ -539,9 +552,6 @@ class Ui_MainWindow(object):
         else:
             connectionColor = "green"
 
-        #TODO Remove
-        #connectionID = str(connectionID)
-
         if (x2 - x1) > 0:  # x direction from node 1 to node 2 is positive
             if (y2 - y1) > 0:  # y direction from node 1 to node 2 is positive
                 if (x2 - x1) > (y2 - y1):  # line in x direction is longer than y
@@ -603,9 +613,36 @@ class Ui_MainWindow(object):
         self.linConnection.lower()
         self.linConnection.show()
 
+    def enableNetworkModification(self):
+        for button, callback in self.NetworkModifyButtonCallbacks.iteritems():
+            if callback is None: button.setEnabled(True)
+            else: callback()
 
-    def restartSimulation(self):
-        print "startSimulation"
+    def disableNetworkModification(self):
+        for button in self.NetworkModifyButtonCallbacks.keys():
+            button.setDisabled(True)
+
+    def traceNetwork(self):
+        if(not self.network_traced):
+            trace = src.Network.trace
+
+            nodes = self.nodes.values()
+
+            for node in nodes:
+                location = node.getLocation()
+                trace.write('Node: id:%d type:%s XPos:%s YPos:%s\n'%\
+                            (node.getIDInt(), node.getType(), location[0], location[1]))
+
+            for id, conn in src.Network.network.connections.iteritems():
+                trace.write('Conn: id:%s type:%s node:%d node:%d\n'%\
+                            (id, conn.connectionType, id[0], id[1]))
+
+            self.network_traced = True
+
+    def clearSimulation(self):
+        print "clearSimulation"
+        self.network_traced = False
+        src.Network.trace_init()
         if not self.simulation_started:
             self.simulation_started = True
 
@@ -615,23 +652,47 @@ class Ui_MainWindow(object):
         self.connections = []
         self.selectedConnections = []
 
-        #This is for the GUI Node, do not delete it again!
+        # This is for the GUI Node, do not delete it again!
         Node.static_id = 0
 
         self.pauseSimulation()
         self.clearAndRepaint()
 
+        self.enableNetworkModification()
+
+    def restartSimulation(self):
+        print "startSimulation"
+        self.network_traced = False
+        src.Network.trace_init()
+        if not self.simulation_started:
+            self.simulation_started = True
+
+        self.selectedNodes = {}
+        self.selectedConnections = []
+        self.pauseSimulation()
+        self.clearAndRepaint()
+
+        self.enableNetworkModification()
 
     def stepSimulation(self):
         print "stepSimulation"
+        self.disableNetworkModification()
+        self.traceNetwork()
         if self.simulation_started and self.simulation_paused:
             # time.sleep() accepts time in seconds.  Spinner displays in ms.
             interval = float(self.updateIntervalSpinner.value()) / 1000.0
             self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, src.Network.env.run,
                                                                      updateInterval=interval,
                                                                      numLoops = 1)
+
     def playSimulation(self):
         print "playSimulation"
+
+        self.disableNetworkModification()
+        self.btnClear.setDisabled(True)
+
+        self.traceNetwork()
+
         self.simulation_paused = False
         #time.sleep() accepts time in seconds.  Spinner displays in ms.
         interval = float(self.updateIntervalSpinner.value()) / 1000.0
@@ -644,6 +705,8 @@ class Ui_MainWindow(object):
 
         if(self.simulation_thread != None):
             self.simulation_thread.end()
+
+        self.btnClear.setEnabled(True)
 
 
     def recomputeRoutingTables(self):
@@ -680,8 +743,6 @@ class Ui_MainWindow(object):
 
         QtCore.QObject.connect(self.btnDeleteNode, QtCore.SIGNAL(_fromUtf8("clicked()")),
                                self.MicroWindow.updateState)
-
-
 
 
 class NodeLabel(QtGui.QLabel):
@@ -764,15 +825,16 @@ class NetworkConnection(QtGui.QFrame):
     def setMainWindow(self, mw):
         self.mainWindow = mw
 
-    def getLatency(self):
-        #TODO make this actually correct should probably talk to simulation connection
-        #Probably calculate from length and type
-        return 100
-
-    def getBandwidth(self):
-        #TODO make this actually correct should probably talk to simulation connection
-        #Max bandwidth probably determined by type.
-        return 200
+    # TODO remove???
+    # def getLatency(self):
+    #     #TODO make this actually correct should probably talk to simulation connection
+    #     #Probably calculate from length and type
+    #     return 100
+    #
+    # def getBandwidth(self):
+    #     #TODO make this actually correct should probably talk to simulation connection
+    #     #Max bandwidth probably determined by type.
+    #     return 200
 
     def mousePressEvent(self, ev):
         # TODO add Shift + Click for multiple selection

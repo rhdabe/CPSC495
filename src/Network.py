@@ -20,8 +20,11 @@ class Network:
         # indexed by a Connection instance.  Values are simpy Events which return the connection state when triggered.
         self.connectionStates = {}
 
-        #indexed by packet_id
+        # indexed by packet_id
         self.packets = {}
+
+        # for use in MacroGUI
+        self.traced = False
 
 
 
@@ -170,19 +173,21 @@ trace = None
 env = None
 network = None
 
+def trace_init():
+    global trace
+    if trace is not None:
+        trace.close()
+        os.remove('trace')
+
+    trace = open('trace', mode='w', buffering=0)
+
 def network_init():
 
     global network
     network = Network()
     global env
     env = simpy.Environment(trace_cb=SimPyStuff.trace_cb)
-    global trace
-
-    if trace is not None:
-        trace.close()
-        os.remove('trace')
-
-    trace = open('trace', mode='w')
+    trace_init()
 
     Node.Node.static_id = 0
 

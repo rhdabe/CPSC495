@@ -13,7 +13,7 @@ class IPHeader:
         self.dest_IP = dst
 
     def __str__(self):
-        return "src_IP: " + str(self.src_IP) + " dest_IP: " + str(self.dest_IP)
+        return "IP HEADER: src_IP: " + str(self.src_IP) + " dest_IP: " + str(self.dest_IP)
         # return '{0:b}{1:b}'.format(self.src_IP[0], self.src_IP[1], self.dest_IP[0], self.dest_IP[1])
 
 
@@ -24,7 +24,7 @@ class IPDatagram:
 
     # default print notation when printing an IPDatagram
     def __str__(self):
-        return "[IP HEADER: %s , %s]" % (self.ip_header, self.frame)
+        return "%s , %s" % (self.header, self.segment)
 
     def get_src_IP(self):
         return self.header.src_IP
@@ -37,12 +37,6 @@ class IPDatagram:
 
     def set_dest_IP(self, d):
         self.header.dest_IP = d
-
-    def get_bit_string(self):
-        return str(self.header) + self.IP_datagram
-
-    def get_payload_bits(self):
-        return self.IP_datagram
 
 
 

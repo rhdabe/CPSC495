@@ -1,6 +1,6 @@
 class Connection:
     static_id = 0;
-    COAX_LATENCY = 5
+    COAX_LATENCY = 2
     FIBRE_LATENCY = 1
 
     #TODO remove this.
@@ -13,7 +13,7 @@ class Connection:
     #     self.connectionLength = length
     #     self.trafficCount = 0
 
-    def __init__(self, type="Coax", length=100):
+    def __init__(self, type="Coax", length=2):
         # Note that node1 and node2 are Node descendant instances, not node ids.
         self.connection_id = Connection.static_id
         Connection.static_id += 1
@@ -25,21 +25,17 @@ class Connection:
 
         #hokey integration list for micro
         self.nodes = []
+
     def get_latency(self):
 
         if self.connectionType == "Coax":
-            return Connection.COAX_LATENCY + self.connectionLength
+            return Connection.COAX_LATENCY * self.connectionLength
         elif self.connectionType == "Fibre":
-            return Connection.FIBRE_LATENCY + self.connectionLength
+            return Connection.FIBRE_LATENCY * self.connectionLength
         elif self.connectionType == None:
             return self.connectionLength
 
-        #TODO some sort of calc based on type and length
-
-
-
         return self.connectionLength
-
 
     def other_interface(self, interface):
         if interface == self.interfaces[0]:

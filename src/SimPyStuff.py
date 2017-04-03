@@ -9,6 +9,12 @@ class DropStoreGet(simpy.resources.store.StoreGet):
 class DropStorePut(simpy.resources.store.StorePut):
     pass
 
+class PacketSent(simpy.Event):
+    pass
+
+class PacketArrived(simpy.Event):
+    pass
+
 class PacketDropped(simpy.Event):
     pass
 
@@ -23,12 +29,13 @@ class DropStore(simpy.Store):
     def dropPut(self, item):
         if len(self.items) < self.capacity:
             self.put(item)
+        else:
+           PacketDropped(src.Network.env).succeed(value = str(item))
         # Otherwise, ignore the item.
 
     put = BoundClass(DropStorePut)
 
     get = BoundClass(DropStoreGet)
-
 
 
 def LL_Input_Port(env, LL_int):
@@ -41,6 +48,11 @@ def LL_Input_Port(env, LL_int):
     while True:
         frame = yield in_store.get()
 
+        other_node = LL_int.connection.other_interface(LL_int).node.node_id
+        this_node = LL_int.node.node_id
+        info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
+
+        PacketArrived(src.Network.env).succeed(value=info)
         # Forward the frame, if I know where to send it
 
         # Add/refresh entry in switch table for src_MAC
@@ -87,6 +99,12 @@ def NL_Input_Port(env, NL_int):
 
     while True:
         frame = yield in_store.get()
+
+        other_node = NL_int.connection.other_interface(NL_int).node.node_id
+        this_node = NL_int.node.node_id
+        info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
+
+        PacketArrived(src.Network.env).succeed(value=info)
 
         need_to_process = False
 
@@ -166,7 +184,7 @@ def NL_Output_Port(env, NL_int):
                 #TODO this may no longer be necessary
                 NL_int.node.add_packet(NL_int, arp_frame)
 
-                print 'NL_int IP', NL_int.IP_address, 'sending ARP query', arp_frame
+                print 'NL_int IP', str(NL_int.IP_address), 'sending ARP query', str(arp_frame)
 
                 yield env.timeout(NL_int.connection.get_latency())
                 send_frame(arp_frame, NL_int)
@@ -186,7 +204,7 @@ def send_frame(frame, interface):
     # In which case, the connection and connectionStates event no longer exist.
     # If this happens, then just move on.
 
-    #TODO nothing happens if this is uncommented.  Literally nothing.  Debugger won't touch it. I don't get it.
+    # TODO nothing happens if this is uncommented.  Literally nothing.  Debugger won't touch it. yield might be bad here
     # try:
     #     for bit in frame.get_bit_string():
     #         print "setting connection state to", bit
@@ -205,12 +223,19 @@ def send_frame(frame, interface):
         interface.connection.other_interface(interface).input_NL_queue.dropPut(frame)
     else: interface.connection.other_interface(interface).input_LL_queue.dropPut(frame)
 
+    other_node = other_interface.node.node_id
+    this_node = interface.node.node_id
+    info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
+
+    PacketSent(src.Network.env).succeed(value=info)
+
 
 def trace_cb(event):
-    env = event.env
-    value = event.value
-    string = 'Now: %d value: %s, event: %s' % (env.now, value, event)
+    if not isinstance(event, (DropStoreGet, DropStorePut, simpy.Timeout)):
+        env = event.env
+        value = event.value
+        string = '%d event: %s value: %s' % (env.now, event, value)
 
-    trace = src.Network.trace
-    trace.write(string)
-    trace.write('\n')
+        trace = src.Network.trace
+        trace.write(string)
+        trace.write('\n')

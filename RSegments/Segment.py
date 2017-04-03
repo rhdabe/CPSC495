@@ -16,7 +16,7 @@ class Segment:
 
     # default print notation when printing a Segment
     def __str__(self):
-        return "[[SEGMENT HEADER: %s ], MESSAGE: %s]" % (self.header, self.message)
+        return "SEGMENT HEADER: %s, MESSAGE: %s" % (self.header, self.message)
 
 
 class TCPSegment(Segment):
