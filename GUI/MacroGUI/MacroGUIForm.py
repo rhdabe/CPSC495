@@ -137,13 +137,13 @@ class Ui_MainWindow(object):
         self.dockCPContents = QtGui.QWidget()
         self.dockCPContents.setObjectName(_fromUtf8("dockCPContents"))
         self.lblConnectionLength = QtGui.QLabel(self.dockCPContents)
-        self.lblConnectionLength.setGeometry(QtCore.QRect(30, 50, 41, 16))
+        self.lblConnectionLength.setGeometry(QtCore.QRect(30, 40, 41, 16))
         self.lblConnectionLength.setObjectName(_fromUtf8("lblConnectionLength"))
         self.lblConnectionType = QtGui.QLabel(self.dockCPContents)
         self.lblConnectionType.setGeometry(QtCore.QRect(10, 10, 81, 20))
         self.lblConnectionType.setObjectName(_fromUtf8("lblConnectionType"))
         self.lblConnectionBandwidth = QtGui.QLabel(self.dockCPContents)
-        self.lblConnectionBandwidth.setGeometry(QtCore.QRect(20, 80, 61, 16))
+        self.lblConnectionBandwidth.setGeometry(QtCore.QRect(20, 65, 61, 16))
         self.lblConnectionBandwidth.setObjectName(_fromUtf8("lblConnectionBandwidth"))
         self.cboConnectionType = QtGui.QComboBox(self.dockCPContents)
         self.cboConnectionType.setGeometry(QtCore.QRect(108, 10, 81, 22))
@@ -151,12 +151,12 @@ class Ui_MainWindow(object):
         self.cboConnectionType.setMaxCount(3)
         self.cboConnectionType.setObjectName(_fromUtf8("cboConnectionType"))
         self.txtConnectionLength = QtGui.QPlainTextEdit(self.dockCPContents)
-        self.txtConnectionLength.setGeometry(QtCore.QRect(90, 50, 61, 21))
+        self.txtConnectionLength.setGeometry(QtCore.QRect(90, 40, 61, 21))
         self.txtConnectionLength.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtConnectionLength.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtConnectionLength.setObjectName(_fromUtf8("txtConnectionLength"))
         self.txtConnectionBandwidth = QtGui.QPlainTextEdit(self.dockCPContents)
-        self.txtConnectionBandwidth.setGeometry(QtCore.QRect(90, 80, 61, 21))
+        self.txtConnectionBandwidth.setGeometry(QtCore.QRect(90, 65, 61, 21))
         self.txtConnectionBandwidth.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtConnectionBandwidth.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtConnectionBandwidth.setObjectName(_fromUtf8("txtConnectionBandwidth"))
@@ -615,9 +615,7 @@ class Ui_MainWindow(object):
         self.connections = []
         self.selectedConnections = []
 
-        Node.static_id = 0
-
-
+        self.pauseSimulation()
 
         self.clearAndRepaint()
 
@@ -627,19 +625,24 @@ class Ui_MainWindow(object):
         if self.simulation_started and self.simulation_paused:
             # time.sleep() accepts time in seconds.  Spinner displays in ms.
             interval = float(self.updateIntervalSpinner.value()) / 1000.0
-            self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval,
-                                                                     numLoops=1)
+            self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, src.Network.env.run,
+                                                                     updateInterval=interval,
+                                                                     numLoops = 1)
     def playSimulation(self):
         print "playSimulation"
         self.simulation_paused = False
         #time.sleep() accepts time in seconds.  Spinner displays in ms.
         interval = float(self.updateIntervalSpinner.value()) / 1000.0
-        self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, updateInterval=interval)
+        self.simulation_thread = SimulationLoop.start_simulation(src.Network.network, src.Network.env.run,
+                                                                 updateInterval = interval)
 
     def pauseSimulation(self):
         print"pauseSimulation"
         self.simulation_paused = True
-        self.simulation_thread.end()
+
+        if(self.simulation_thread != None):
+            self.simulation_thread.end()
+
 
     def recomputeRoutingTables(self):
         # compute routing tables for each router and host

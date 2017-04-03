@@ -2,6 +2,9 @@ from NQueue import NQueue
 from RSegments.IP import *
 from RSegments.Ethernet import *
 from Packet import Packet
+import Network
+import SimPyStuff
+
 class LLInterface(object):
     # TODO for now use infinite queues.  Later will set queue size.
     # TODO apparently switch interfaces can send and receive at the same time... maybe figure that out later.
@@ -10,10 +13,18 @@ class LLInterface(object):
 
     #MAC addresses start from 1.  0 is the broadcast address.
     static_MAC = 1
-
+    static_ID = 0
     def __init__(self, node):
+        self.id = LLInterface.static_ID
+        LLInterface.static_ID += 1
         self.node = node
-        self.output_LL_queue = NQueue()
+
+
+        if(not isinstance(self, NLInterface)):
+            self.input_LL_Port = Network.env.process(SimPyStuff.LL_Input_Port(Network.env, self))
+            self.output_LL_Port = Network.env.process(SimPyStuff.LL_Output_Port(Network.env, self))
+            self.output_LL_queue = NQueue()
+            self.input_LL_queue = NQueue(1)
         self.MAC_address = LLInterface.static_MAC
         LLInterface.static_MAC += 1
         self.connection = None  # points to current connection object
@@ -35,7 +46,7 @@ class LLInterface(object):
         assert isinstance(frame, EthernetFrame), "ERROR: %s is not an EthernetFrame" % frame
         if self.transmitting:
             print "switch adding frame to output queue"
-            self.output_LL_queue.enqueue(frame)
+            self.output_LL_queue.put(frame)
         else:
             print "starting frame transmission"
             self.transmitting = True
@@ -49,7 +60,7 @@ class LLInterface(object):
         if self.transmitting:
             self.send_bit()
         elif not self.output_LL_queue.isEmpty():
-            self.send_frame(self.output_LL_queue.dequeue())
+            self.send_frame(self.output_LL_queue.get())
 
     def send_bit(self):
         if len(self.bit_string) > self.next_bit:
@@ -127,6 +138,8 @@ class NLInterface (LLInterface):
         NLInterface.static_IP += 1
         self.input_NL_queue = NQueue()
         self.output_NL_queue = NQueue()
+        self.input_NL_Port = Network.env.process(SimPyStuff.NL_Input_Port(Network.env, self))
+        self.output_NL_Port = Network.env.process(SimPyStuff.NL_Output_Port(Network.env, self))
         self.ARP_table = node.ARP_table
         self.routing_table = node.routing_table
 
@@ -138,7 +151,7 @@ class NLInterface (LLInterface):
         print "I'm NLInterface MAC", self.MAC_address, "and I'm asleep!"
         self.receiving = False
         self.received = True
-        self.input_NL_queue.enqueue(frame)
+        self.input_NL_queue.put(frame)
         self.node.add_packet(self, frame)
 
     def send_datagram(self, datagram):
@@ -164,7 +177,7 @@ class NLInterface (LLInterface):
                     need_to_process = False;
                     self.process_ARP_packet()
             else:
-                queue.dequeue()
+                queue.get()
                 need_to_process = False;
         else:
             need_to_process = False
@@ -201,7 +214,7 @@ class NLInterface (LLInterface):
                 # updating both the dest_MAC and src_MAC fields of the EthernetFrame
                 frame.set_src_MAC(self.MAC_address)
                 frame.set_dest_MAC(next_MAC)
-                self.send_frame(self.output_NL_queue.dequeue())
+                self.send_frame(self.output_NL_queue.get())
             else:
                 if not(self.ARP_list.__contains__(frame)):
                     # If we do not know, and aren't already waiting for an ARP reply, we must leave the IPDatagram
@@ -217,36 +230,46 @@ class NLInterface (LLInterface):
     def is_ARP_packet(self, frame):
         return frame.ip_datagram.segment == NLInterface.ARP_payload
 
-    '''either returns the ARP packet to sender with this interface's MAC address as the src_MAC
-        or else updates the ARP table stored in the Router to which this interface belongs.'''
-    def process_ARP_packet(self):
-        print "IP", self.IP_address, "processing ARP packet"
+
+    def process_ARP_packet(self, NL_int, frame):
+        '''This method is intended to be called by a SimPy Process.  It either returns the ARP packet to sender with this
+        interface's MAC address as the src_MAC or else updates the ARP table stored in the Router to which this interface
+        belongs.  Will yield if this NLInterface's output queue is full.
+
+        :arg NL_int an NLInterface instance which has just recieved an ARP frame
+        :arg frame an ARP frame to be processed
+        '''
+
+        print "IP", NL_int.IP_address, "processing ARP packet"
         # This method assumes that the ARP packet is at the head of this interface's input queue.
-        frame = self.input_NL_queue.dequeue()
         src_IP = frame.ip_datagram.get_src_IP()
 
-        if self.is_ARP_reply(frame):
-            print "IP", self.IP_address, "updating ARP table"
-            self.ARP_table[src_IP] = {}
-            self.ARP_table[src_IP]["MAC"] = frame.get_src_MAC()
-            self.ARP_table[src_IP]["TTL"] = NLInterface.DEFAULT_ARP_TTL
+        if NL_int.is_ARP_reply(frame):
+            # Update the ARP table
+            print "IP", NL_int.IP_address, "updating ARP table"
+            NL_int.ARP_table[src_IP] = {}
+            NL_int.ARP_table[src_IP]["MAC"] = frame.get_src_MAC()
+            NL_int.ARP_table[src_IP]["TTL"] = NLInterface.DEFAULT_ARP_TTL
 
-        elif self.is_ARP_query(frame):
-            print "IP", self.IP_address, "replying to ARP query"
+            return None
+
+        elif NL_int.is_ARP_query(frame):
+            # Reply to ARP query
+            print "IP", NL_int.IP_address, "replying to ARP query"
             sender_MAC = frame.get_src_MAC()
 
             frame.set_dest_MAC(frame.get_src_MAC())
-            frame.set_src_MAC(self.MAC_address)
+            frame.set_src_MAC(NL_int.MAC_address)
             datagram = frame.ip_datagram
 
             sender_IP = datagram.get_src_IP()
 
             datagram.set_dest_IP(sender_IP)
-            datagram.set_src_IP(self.IP_address)
-            self.output_NL_queue.enqueue(frame)
-
+            datagram.set_src_IP(NL_int.IP_address)
             # update this node's ARP table
-            self.ARP_table[sender_IP] = {"MAC": sender_MAC, "TTL": NLInterface.DEFAULT_ARP_TTL}
+            NL_int.ARP_table[sender_IP] = {"MAC": sender_MAC, "TTL": NLInterface.DEFAULT_ARP_TTL}
+
+            return frame
 
     def is_ARP_query(self, frame):
         datagram = frame.ip_datagram

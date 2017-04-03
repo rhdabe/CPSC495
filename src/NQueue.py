@@ -1,18 +1,24 @@
-class NQueue:
-    def __init__(self):
-        self.items = []
+from SimPyStuff import *
+
+
+class NQueue(object):
+
+    packet_capacity = 10
+
+    def __init__(self, capacity = packet_capacity):
+        self.store = DropStore(src.Network.env, capacity)
 
     def isEmpty(self):
-        return self.items == []
+        return len(self.items) == 0
 
-    def enqueue(self, item):
-        self.items.insert(0,item)
+    def put(self, item):
+        return self.store.put(item)
 
-    def dequeue(self):
-        return self.items.pop()
+    def dropPut(self, item):
+        self.store.dropPut(item)
 
-    def peek_head(self):
-        return self.items[self.size() - 1]
+    def get(self):
+        return self.store.get()
 
     def size(self):
-        return len(self.items)
+        return len(self.store.items)

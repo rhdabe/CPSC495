@@ -1,7 +1,7 @@
 from RSegments.Ethernet import *
 from RSegments.IP import *
 import Network
-from Interfaces import LLInterface, NLInterface
+import Interfaces
 import random
 from RSegments.Segment import *
 from RSegments.Header import *
@@ -89,25 +89,25 @@ class Switch(Node):
         self.packets = {}
 
     def new_interface(self):
-        newInterface = LLInterface(self)
-        self.interfaces[self.local_interface_id] = newInterface
+        newInterface = Interfaces.LLInterface(self)
+        self.interfaces[newInterface.id] = newInterface
         self.local_interface_id += 1
         return newInterface
 
     def add_packet(self, interface, frame):
-        print "Host IP", self.interfaces[0].IP_address, "adding packet", frame
+ #       print "Host IP", self.interfaces[0].IP_address, "adding packet", frame
         self.packets[frame] = Packet(interface, frame)
-        print self.packets
+ #       print self.packets
 
     def remove_packet(self, frame):
-        print "Host IP", self.interfaces[0].IP_address, "deleting packet", frame
-        print "packets pre-delete"
-        print self.packets
+        # print "Host IP", self.interfaces[0].IP_address, "deleting packet", frame
+        # print "packets pre-delete"
+        # print self.packets
         try:
             del self.packets[frame]
         except:
             pass
-        print self.packets
+        # print self.packets
 
     def send(self):
         self.switch_send()
@@ -161,13 +161,13 @@ class Switch(Node):
     def forward_LL_frame(self, frame, next_interface_id):
         print "forwarding frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC(), "on interface", next_interface_id,\
             "with MAC", self.interfaces[next_interface_id].MAC_address
-        self.interfaces[next_interface_id].output_LL_queue.enqueue(frame)
+        self.interfaces[next_interface_id].output_LL_queue.put(frame)
 
     def broadcast(self, frame, incoming_id):
         print "broadcasting frame from", frame.get_src_MAC(), "to", frame.get_dest_MAC()
         for id,interface in self.interfaces.iteritems():
             if not id == incoming_id:
-                interface.output_LL_queue.enqueue(frame)
+                interface.output_LL_queue.put(frame)
 
     def next_interface(self, dest_MAC):
         # If the switch table contains the next interface for dest_MAC, return its id, else return 0,
@@ -204,8 +204,8 @@ class Router(Switch):
         self.ARP_table = {}
 
     def new_interface(self):
-        newInterface = NLInterface(self)
-        self.interfaces[self.local_interface_id] = newInterface
+        newInterface = Interfaces.NLInterface(self)
+        self.interfaces[newInterface.id] = newInterface
         self.local_interface_id += 1
         return newInterface
 
@@ -259,7 +259,7 @@ class Router(Switch):
         if dest_IP != interface.IP_address:
             self.forward_IP_datagram(incoming_interface_id)
         else:
-            queue.dequeue
+            queue.get()
 
     def forward_IP_datagram(self, incoming_interface_id):
 
@@ -267,7 +267,7 @@ class Router(Switch):
         dest_IP = queue.peek_head().ip_datagram.get_dest_IP()
 
         next_interface = self.next_hop(dest_IP)["Interface"]
-        next_interface.output_NL_queue.enqueue(queue.dequeue())
+        next_interface.output_NL_queue.put(queue.get())
 
     def next_hop(self, dest_IP):
         # Returns routing table entry for dest_IP.  Format {"Interface": outgoing NLInterface, "IP": receiving IP}
@@ -321,7 +321,7 @@ class Host(Router):
             if not (interface.is_ARP_packet(frame)):
                 self.forward_IP_datagram(incoming_interface_id)
             else:
-                queue.dequeue()
+                queue.get()
         else:
             if interface.is_ARP_packet(frame):
                 interface.process_ARP_packet()
@@ -331,7 +331,7 @@ class Host(Router):
                     "ERROR: datagram payload %s is not UDP or TCP instance" % str(payload)
                 # Needed to add this to datagram processing in a Host node.
                 self.messages.append(payload)
-                queue.dequeue()
+                queue.get()
 
     def receive(self):
         self.router_receive()
@@ -358,12 +358,13 @@ class Host(Router):
     def new_interface(self):
         # Restrict Hosts to have a single IP address for simplicity of message sending.
         if len(self.interfaces) == 0:
-            self.interfaces[0] = NLInterface(self)
+            newInterface = Interfaces.NLInterface(self)
+            self.interfaces[newInterface.id] = newInterface
 
-        return self.interfaces[0]
+        return self.interfaces.values()[0]
 
     def get_IP_address(self):
-        return self.interfaces[0].IP_address
+        return self.interfaces.values()[0].IP_address
 
     '''
     Create a UDP/TCP segment, then encapsulate it in an IPDatagram and let the Router code process it.
@@ -401,7 +402,7 @@ class Host(Router):
         # The 0 destination MAC address doesn't matter.  The correct MAC will be determined in the NL_Interface.
         frame = EthernetFrame(EthernetHeader(interface.MAC_address, 0), ip_datagram)
 
-        self.interfaces[0].output_NL_queue.enqueue(frame)
+        self.interfaces[0].output_NL_queue.put(frame)
 
         self.add_packet(self.interfaces[0], frame)
 

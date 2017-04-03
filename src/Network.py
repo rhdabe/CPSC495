@@ -3,20 +3,26 @@ from Packet import Packet
 from Connection import Connection
 from Interfaces import *
 import Node
+import simpy
 
 class Network:
     def __init__(self):
         # indexed by node_id
         self.nodes = {}
 
-        #indexed by host IP address
+        # indexed by host IP address
         self.hosts = {}
 
-        #indexed by a unique tuple of node_ids.  See get_node_pair_id
+        # indexed by a unique tuple of node_ids.  See get_node_pair_id
         self.connections = {}
+
+        # indexed by a Connection instance.  Values are simpy Events which return the connection state when triggered.
+        self.connectionStates = {}
 
         #indexed by packet_id
         self.packets = {}
+
+
 
     def add_node(self, node):
         """
@@ -58,6 +64,7 @@ class Network:
         """
         pair_id = self.get_node_pair_id(n1_id, n2_id)
         self.connections[pair_id] = connection
+        self.connectionStates[connection] = simpy.events.Event(env)
 
     def get_connection(self, n1_id, n2_id):
         return self.connections[self.get_node_pair_id(n1_id,n2_id)]
@@ -75,25 +82,24 @@ class Network:
             del self.nodes[node_id]
             for c_id in self.connections.keys():
                 if node_id in c_id:
-                    del self.connections[c_id]
+                    self.remove_connection(c_id[0], c_id[1])
             for p_id, packet in self.packets.iteritems():
                 if node_id == packet.current_node.node_id:
                     del self.packets[p_id]
 
-            if isinstance(node, Host):
+            if isinstance(node, Node.Host):
                 del self.hosts[node.interfaces[0].IP_address]
 
             return True
         except:
             return False
 
-
-
     def remove_connection(self, n1_id, n2_id):
         """
         remove a connection by ids of nodes
         """
         try:
+            del self.connectionStates[self.connections[self.get_node_pair_id(n1_id, n2_id)]]
             del self.connections[self.get_node_pair_id(n1_id, n2_id)]
             return True
         except:
@@ -163,8 +169,10 @@ def network_init():
 
     global network
     network = Network()
-    Node.static_id=0
-    Connection.static_id=0
+    global env
+    env = simpy.Environment()
+    Node.static_id = 0
+    Connection.static_id = 0
     Packet.static_packet_id = 0
     LLInterface.static_MAC = 1
     NLInterface.static_IP = 1

@@ -40,17 +40,12 @@ class SimThread(threading.Thread):
         -1 (run forever)"""
 
         while self.access_run_flag():
-            print "looping"
-            print"ui:", self.updateInterval, "numLoops:", self.numLoops
             if self.updateInterval > 0 and self.numLoops != 0:
-                print "going to sleep for", self.updateInterval
+                print "Now:", src.Network.env.now
                 time.sleep(self.updateInterval)
-                print "Okimasu!"
-                self.function(self.args)
+                self.function(src.Network.env.timeout(1))
             if self.numLoops == 0: self.end()
             if self.numLoops > 0 : self.numLoops -= 1
-
-
 
     def access_run_flag(self, write=False, value=False):
         """Provides single read or write access to no more than one thread at a time.
@@ -92,7 +87,7 @@ def simStep(network):
     for node in nodes:
         node.receive()
 
-def start_simulation(network, function=simStep, updateInterval=-1, numLoops = -1):
+def start_simulation(network, function, updateInterval=-1, numLoops = -1):
     """Starts a new SimThread to run the simulation with the given global network object, function, and number of steps.
 
     Defaults to use of the sim_step function, and to perpetual run mode.
@@ -112,15 +107,11 @@ def start_simulation(network, function=simStep, updateInterval=-1, numLoops = -1
         if isinstance(node, src.Node.Router):
             node.routing_table = tables[node]
 
-    thread = SimThread(function, args=network, updateInterval=updateInterval, numLoops = numLoops)
+    thread = SimThread(function, updateInterval=updateInterval, numLoops = numLoops)
     thread.start()
 
     return thread
 
-def tick():
-    #TODO docstring
-    print "tick()"
-    return start_simulation(src.Network.network, updateInterval=500, numLoops = 1)
 
     '''
     Rhys's Notes - Rough Outline
