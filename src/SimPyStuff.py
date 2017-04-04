@@ -2,6 +2,7 @@ import simpy
 from simpy.core import BoundClass
 from Interfaces import *
 import src.Network
+from RSegments.Message import Message
 
 class DropStoreGet(simpy.resources.store.StoreGet):
     pass
@@ -18,10 +19,10 @@ class PacketArrived(simpy.Event):
 class PacketDropped(simpy.Event):
     pass
 
-class PacketEncapsulated(simpy.Event):
+class MessageReceived(simpy.Event):
     pass
 
-class PacketDecapsulated(simpy.Event):
+class MessageEncapsulated(simpy.Event):
     pass
 
 class ConnectionSet(simpy.Event):
@@ -39,66 +40,48 @@ class DropStore(simpy.Store):
 
     get = BoundClass(DropStoreGet)
 
-
-def LL_Input_Port(env, LL_int):
-   # assert isinstance(LL_int, LLInterface()) and not isinstance(LL_int, NLInterface),\
-    #    "ERROR: LL_Process's LL_int argument is not an LLInterface instance"
-
-    in_store = LL_int.input_LL_queue
-    switch = LL_int.node
+def AppInputProcess(env, input_store):
 
     while True:
-        frame = yield in_store.get()
+        message = yield input_store.get()
+        MessageReceived().succeed(value=str(message))
 
-        other_node = LL_int.connection.other_interface(LL_int).node.node_id
-        this_node = LL_int.node.node_id
-        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
+def AppOutputProcess(env, output_store, tran_output_store):
+    while True:
+        thing = yield output_store.get()
+        message = Message(str(thing))
+        yield tran_output_store.put(message)  # TODO could put a tuple (message, protocol argument)
+        MessageEncapsulated().succeed(value=str(message))
 
-        PacketArrived(src.Network.env).succeed(value=info)
-        # Forward the frame, if I know where to send it
-
-        # Add/refresh entry in switch table for src_MAC
-        switch.switch_table[frame.get_src_MAC()] = {'Interface': LL_int.id, 'TTL': switch.DEFAULT_TTL}
-
-        # Determine the next interface this frame would go on.
-        next_interface = switch.next_interface(frame.get_dest_MAC())
-
-        # If I know where this frame should go next:
-        if next_interface != -1:
-            if next_interface != LL_int.id:
-                print LL_int, 'forwarding frame', frame
-                yield switch.interfaces[next_interface].output_LL_queue.put(frame)
-                # Will wait until it is possible to put the frame in the relevant output queue.
-            # else: ignore the frame. They shouldn't be addressed to switches.
-        else:
-            # If I don't know where to send it, send it to everyone.
-            for id, interface in switch.interfaces.iteritems():
-                if not id == LL_int.id:
-                    # TODO where do switches drop packets during congestion?
-                    print "LL_int MAC", LL_int.MAC_address, 'broadcasting frame', frame
-                    yield interface.output_LL_queue.put(frame)
-                    # Assume switches buffer output frames, but not input frames, because
-                    # they can only receive one at a time.
-
-def LL_Output_Port(env, LL_int):
-    # assert isinstance(LL_int, LLInterface()) and not isinstance(LL_int, NLInterface),\
-    #    "ERROR: LL_Process's LL_int argument is not an LLInterface instance"
-
-    out_store = LL_int.output_LL_queue
+def TranInputProcess(env, input_store, app_input_store):
 
     while True:
-        frame = yield out_store.get()
-        print "LL_int MAC", LL_int.MAC_address, 'sending frame', frame
-        # TODO remove this line
-        #yield env.timeout(LL_int.connection.get_latency())
-        # send the frame out onto the connection
-        yield src.Network.env.process(send_frame(frame, LL_int))
-        # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
-        src.Network.env.process(deliver_frame(frame, LL_int))
-        print 'LL_int MAC', LL_int.MAC_address, 'finished sending', frame
+        segment = yield input_store.get()
+        yield app_input_store.put(segment.message)
+
+    # def create_messageUDP(self, startIP, endIP, src_port, dest_port, messageString):
+    #
+    #     segment = UDPSegment(UDPHeader(src_port, dest_port, 0), messageString)
+    #     self.create_message(startIP, endIP, segment)
+    #
+    # '''
+    # create a new TCP message
+    # '''
+    # def create_messageTCP(self, startIP, endIP, src_port, dest_port, messageString):
+    #     segment = TCPSegment(TCPHeader(src_port, dest_port, 0), messageString)
+    #     self.create_message(startIP, endIP, segment)
+
+def TranOutputProcess(env, output_store, app_output_store, src_port, dest_port, TCP = False):
+
+    while True:
+        message = yield app_output_store.get()  # TODO this could be a tuple (message, protocol argument)
 
 
-def NL_Input_Port(env, NL_int):
+
+
+
+
+def NetInputProcess(env, NL_int):
    # assert isinstance(NL_int, NLInterface), "ERROR: NL_Process's NL_int argument is not an NLInterface instance"
     in_store = NL_int.input_NL_queue
     router = NL_int.node
@@ -142,7 +125,7 @@ def NL_Input_Port(env, NL_int):
                     print "message received at", NL_int.IP_address, frame.ip_datagram.segment
             # else: ignore the frame
 
-def NL_Output_Port(env, NL_int):
+def NetOutputProcess(env, NL_int):
     #assert isinstance(NL_int, NLInterface), "ERROR: NL_Process's NL_int argument is not an NLInterface instance"
 
     out_store = NL_int.output_NL_queue
@@ -179,7 +162,7 @@ def NL_Output_Port(env, NL_int):
             # TODO remove this line
             #yield env.timeout(NL_int.connection.get_latency())
             # Send packet out onto connection
-            yield src.Network.env.process(send_frame(frame, NL_int))
+            yield src.Network.env.process(PhysProcess(frame, NL_int))
             # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
             src.Network.env.process(deliver_frame(frame, NL_int))
             print 'NL_int IP', NL_int.IP_address, 'finished sending', frame
@@ -198,7 +181,7 @@ def NL_Output_Port(env, NL_int):
                 # TODO remove this line
                 #yield env.timeout(NL_int.connection.get_latency())
                 # send the frame out onto the connection
-                yield src.Network.env.process(send_frame(arp_frame, NL_int))
+                yield src.Network.env.process(PhysProcess(arp_frame, NL_int))
                 # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
                 src.Network.env.process(deliver_frame(arp_frame, NL_int))
                 print 'NL_int IP', NL_int.IP_address, 'finished sending ARP query', arp_frame
@@ -212,7 +195,64 @@ def NL_Output_Port(env, NL_int):
             out_store.put(frame)
             yield src.Network.env.timeout(1)
 
-def send_frame(frame, interface):
+def LinkInputProcess(env, LL_int):
+   # assert isinstance(LL_int, LLInterface()) and not isinstance(LL_int, NLInterface),\
+    #    "ERROR: LL_Process's LL_int argument is not an LLInterface instance"
+
+    in_store = LL_int.input_LL_queue
+    switch = LL_int.node
+
+    while True:
+        frame = yield in_store.get()
+
+        other_node = LL_int.connection.other_interface(LL_int).node.node_id
+        this_node = LL_int.node.node_id
+        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
+
+        PacketArrived(src.Network.env).succeed(value=info)
+        # Forward the frame, if I know where to send it
+
+        # Add/refresh entry in switch table for src_MAC
+        switch.switch_table[frame.get_src_MAC()] = {'Interface': LL_int.id, 'TTL': switch.DEFAULT_TTL}
+
+        # Determine the next interface this frame would go on.
+        next_interface = switch.next_interface(frame.get_dest_MAC())
+
+        # If I know where this frame should go next:
+        if next_interface != -1:
+            if next_interface != LL_int.id:
+                print LL_int, 'forwarding frame', frame
+                yield switch.interfaces[next_interface].output_LL_queue.put(frame)
+                # Will wait until it is possible to put the frame in the relevant output queue.
+            # else: ignore the frame. They shouldn't be addressed to switches.
+        else:
+            # If I don't know where to send it, send it to everyone.
+            for id, interface in switch.interfaces.iteritems():
+                if not id == LL_int.id:
+                    # TODO where do switches drop packets during congestion?
+                    print "LL_int MAC", LL_int.MAC_address, 'broadcasting frame', frame
+                    yield interface.output_LL_queue.put(frame)
+                    # Assume switches buffer output frames, but not input frames, because
+                    # they can only receive one at a time.
+
+def LinkOutputProcess(env, LL_int):
+    # assert isinstance(LL_int, LLInterface()) and not isinstance(LL_int, NLInterface),\
+    #    "ERROR: LL_Process's LL_int argument is not an LLInterface instance"
+
+    out_store = LL_int.output_LL_queue
+
+    while True:
+        frame = yield out_store.get()
+        print "LL_int MAC", LL_int.MAC_address, 'sending frame', frame
+        # TODO remove this line
+        #yield env.timeout(LL_int.connection.get_latency())
+        # send the frame out onto the connection
+        yield src.Network.env.process(PhysProcess(frame, LL_int))
+        # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
+        src.Network.env.process(deliver_frame(frame, LL_int))
+        print 'LL_int MAC', LL_int.MAC_address, 'finished sending', frame
+
+def PhysProcess(frame, interface):
     # Write the frame bit string onto the connection
 
     # write to connection once per time step by setting the connection state

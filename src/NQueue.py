@@ -3,7 +3,7 @@ from SimPyStuff import *
 
 class NQueue(object):
 
-    packet_capacity = 10
+    packet_capacity = 3
 
     def __init__(self, capacity = packet_capacity):
         self.store = DropStore(src.Network.env, capacity)
