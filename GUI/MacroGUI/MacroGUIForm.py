@@ -630,12 +630,12 @@ class Ui_MainWindow(object):
 
             for node in nodes:
                 location = node.getLocation()
-                trace.write('Node: id:%d type:%s XPos:%s YPos:%s\n'%\
+                trace.write('Node:id:%d type:%s XPos:%s YPos:%s\n'%\
                             (node.getIDInt(), node.getType(), location[0], location[1]))
 
             for id, conn in src.Network.network.connections.iteritems():
-                trace.write('Conn: id:%s type:%s node:%d node:%d\n'%\
-                            (id, conn.connectionType, id[0], id[1]))
+                trace.write('Conn:id:%s type:%s node:%d node:%d\n'%\
+                            (conn.connection_id, conn.connectionType, id[0], id[1]))
 
             self.network_traced = True
 

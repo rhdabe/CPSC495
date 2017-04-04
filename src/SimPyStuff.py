@@ -52,7 +52,7 @@ def LL_Input_Port(env, LL_int):
 
         other_node = LL_int.connection.other_interface(LL_int).node.node_id
         this_node = LL_int.node.node_id
-        info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
+        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
 
         PacketArrived(src.Network.env).succeed(value=info)
         # Forward the frame, if I know where to send it
@@ -108,7 +108,7 @@ def NL_Input_Port(env, NL_int):
 
         other_node = NL_int.connection.other_interface(NL_int).node.node_id
         this_node = NL_int.node.node_id
-        info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
+        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
 
         PacketArrived(src.Network.env).succeed(value=info)
 
@@ -219,7 +219,9 @@ def send_frame(frame, interface):
     for bit in frame.get_bit_string():
         print "setting connection state to", bit
         # Trigger event to change connection state so it shows up in trace and GUI.
-        src.Network.network.connectionStates[interface.connection].succeed(bit)
+        connection = interface.connection
+        string = 'Conn:id:%s state:%s' % (connection.connection_id, connection.state)
+        src.Network.network.connectionStates[interface.connection].succeed(string)
         # Reset the connection state event
         src.Network.network.connectionStates[interface.connection] = simpy.events.Event(src.Network.env)
         yield src.Network.env.timeout(1)
@@ -228,7 +230,7 @@ def send_frame(frame, interface):
         other_interface = interface.connection.other_interface(interface)
         other_node = other_interface.node.node_id
         this_node = interface.node.node_id
-        info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
+        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
 
         PacketSent(src.Network.env).succeed(value=info)
 
@@ -250,7 +252,7 @@ def trace_cb(event):
     if not isinstance(event, (DropStoreGet, DropStorePut, simpy.Timeout)):
         env = event.env
         value = event.value
-        string = '%d event: %s value: %s' % (env.now, event, value)
+        string = '%d event:%s value:%s' % (env.now, event, value)
 
         trace = src.Network.trace
         trace.write(string)
