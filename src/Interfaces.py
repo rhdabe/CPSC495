@@ -15,12 +15,10 @@ class LLInterface(object):
         self.id = LLInterface.static_ID
         LLInterface.static_ID += 1
         self.node = node
-
-        if(not isinstance(self, NLInterface)):
-            self.input_LL_Port = Network.env.process(SimPyStuff.LinkInputProcess(Network.env, self))
-            self.output_LL_Port = Network.env.process(SimPyStuff.LinkOutputProcess(Network.env, self))
-            self.output_LL_queue = NQueue()
-            self.input_LL_queue = NQueue()
+        self.input_LL_process = Network.env.process(SimPyStuff.LinkInputProcess(Network.env, self))
+        self.input_LL_queue = NQueue()
+        self.output_LL_process = Network.env.process(SimPyStuff.LinkOutputProcess(Network.env, self))
+        self.output_LL_queue = NQueue()
         self.MAC_address = LLInterface.static_MAC
         LLInterface.static_MAC += 1
         self.connection = None  # points to current connection object
@@ -51,12 +49,12 @@ class NLInterface (LLInterface):
         NLInterface.static_IP += 1
         self.input_NL_queue = NQueue()
         self.output_NL_queue = NQueue()
-        self.input_NL_Port = Network.env.process(SimPyStuff.NetInputProcess(Network.env, self))
-        self.output_NL_Port = Network.env.process(SimPyStuff.NetOutputProcess(Network.env, self))
+        self.input_NL_process = Network.env.process(SimPyStuff.NetInputProcess(Network.env, self))
+        self.output_NL_process = Network.env.process(SimPyStuff.NetOutputProcess(Network.env, self))
         self.ARP_table = node.ARP_table
         self.routing_table = node.routing_table
 
-        # List of packets waiting on ARP replies.  Used to prevent this router from ARP spamming.
+        # List of datagrams waiting on ARP replies.  Used to prevent this router from ARP spamming.
         self.ARP_list = []
 
     def is_ARP_packet(self, frame):

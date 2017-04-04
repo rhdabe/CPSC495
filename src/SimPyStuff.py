@@ -2,7 +2,11 @@ import simpy
 from simpy.core import BoundClass
 from Interfaces import *
 import src.Network
+from Protocols import *
 from RSegments.Message import Message
+from RSegments.IP import IPHeader, IPDatagram
+from RSegments.Ethernet import *
+import Node
 
 class DropStoreGet(simpy.resources.store.StoreGet):
     pass
@@ -25,6 +29,21 @@ class MessageReceived(simpy.Event):
 class MessageEncapsulated(simpy.Event):
     pass
 
+class SegmentEncapsulated(simpy.Event):
+    pass
+
+class SegmentDecapsulated(simpy.Event):
+    pass
+
+class DatagramEncapsulated(simpy.Event):
+    pass
+
+class DatagramDecapsulated(simpy.Event):
+    pass
+
+class FrameDecapsulated(simpy.Event):
+    pass
+
 class ConnectionSet(simpy.Event):
     pass
 
@@ -40,100 +59,61 @@ class DropStore(simpy.Store):
 
     get = BoundClass(DropStoreGet)
 
-def AppInputProcess(env, input_store):
-
+def AppInputProcess(env, app_input_store):
     while True:
-        message = yield input_store.get()
-        MessageReceived().succeed(value=str(message))
+        message = yield app_input_store.get()
+        MessageReceived(env).succeed(value=str(message))
+        yield env.timeout(1)
 
-def AppOutputProcess(env, output_store, tran_output_store):
+
+def AppOutputProcess(env, app_output_store, tran_output_store):
     while True:
-        thing = yield output_store.get()
-        message = Message(str(thing))
-        yield tran_output_store.put(message)  # TODO could put a tuple (message, protocol argument)
-        MessageEncapsulated().succeed(value=str(message))
+        message = yield app_output_store.get()
+        segment = protocols["Trans"][message.transport_protocol].getSegment(message)
+        yield env.timeout(1)
+        yield tran_output_store.put(segment)
+        MessageEncapsulated(env).succeed(value=str(message))
 
-def TranInputProcess(env, input_store, app_input_store):
 
+def TranInputProcess(env, tran_input_store, app_input_store):
     while True:
-        segment = yield input_store.get()
+        segment = yield tran_input_store.get()
+        yield env.timeout(1)
         yield app_input_store.put(segment.message)
+        SegmentDecapsulated(env).succeed(value=str(segment))
 
-    # def create_messageUDP(self, startIP, endIP, src_port, dest_port, messageString):
-    #
-    #     segment = UDPSegment(UDPHeader(src_port, dest_port, 0), messageString)
-    #     self.create_message(startIP, endIP, segment)
-    #
-    # '''
-    # create a new TCP message
-    # '''
-    # def create_messageTCP(self, startIP, endIP, src_port, dest_port, messageString):
-    #     segment = TCPSegment(TCPHeader(src_port, dest_port, 0), messageString)
-    #     self.create_message(startIP, endIP, segment)
 
-def TranOutputProcess(env, output_store, app_output_store, src_port, dest_port, TCP = False):
 
+def TranOutputProcess(env, tran_output_store, net_output_store):
     while True:
-        message = yield app_output_store.get()  # TODO this could be a tuple (message, protocol argument)
+        segment = yield tran_output_store.get()
+        src_IP = segment.message.src_IP
+        dest_IP = segment.message.dest_IP
+        datagram = IPDatagram(IPHeader(src_IP,dest_IP), segment)
+        yield env.timeout(1)
+        SegmentEncapsulated(env).succeed(value=str(datagram))
+        yield net_output_store.put(datagram)
 
 
 
-
-
-
-def NetInputProcess(env, NL_int):
-   # assert isinstance(NL_int, NLInterface), "ERROR: NL_Process's NL_int argument is not an NLInterface instance"
-    in_store = NL_int.input_NL_queue
-    router = NL_int.node
-
+def HostNetOutputProcess(net_output_store, host):
+    # This process handles moving packets from a communal network layer output_store into the output store of the
+    # specific network layer interface that will handle the transmission.  It only exists within a Host.
+    # Note that encapsulation does not occur here, because a datagram is moving from one network level entity
+    # to another.  Since this processing doesn't occur, I treat this step as instantaneous, and so there is no
+    # timeout here.
     while True:
-        frame = yield in_store.get()
-
-        other_node = NL_int.connection.other_interface(NL_int).node.node_id
-        this_node = NL_int.node.node_id
-        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
-
-        PacketArrived(src.Network.env).succeed(value=info)
-
-        need_to_process = False
-
-        # If it has my MAC, might need to process.
-        if frame.get_dest_MAC() == NL_int.MAC_address or frame.get_dest_MAC() == 0:
-            need_to_process = True;
-            if NL_int.is_ARP_packet(frame):
-                # If it is ARP, then I can deal with it now.  No need to process.
-                need_to_process = False;
-
-                frame = NL_int.process_ARP_packet(NL_int, frame)
-
-                if(frame != None): yield NL_int.output_NL_queue.put(frame)
-        # else: ignore the frame.
-
-        if(need_to_process):
-            dest_IP = frame.ip_datagram.get_dest_IP()
-
-            # If the datagram is destined for some other IP (for now, nothing talks directly to Routers, so delete if it
-            # is for this Router.)
-            if dest_IP != NL_int.IP_address:
-                # forward the frame
-                next_interface = router.next_hop(dest_IP)["Interface"]
-                # If the other interface's output queue is full, wait until it isn't.
-                print "NL_int IP", NL_int.IP_address, 'forwarding packet', frame
-                yield next_interface.output_NL_queue.put(frame)
-            else:
-                if isinstance(NL_int.node, src.Node.Host):
-                    print "message received at", NL_int.IP_address, frame.ip_datagram.segment
-            # else: ignore the frame
+        datagram = yield net_output_store.get()
+        dest_IP = datagram.get_dest_IP()
+        next_interface = host.next_hop(dest_IP)["Interface"]
+        yield next_interface.output_NL_queue.put(datagram)
 
 def NetOutputProcess(env, NL_int):
     #assert isinstance(NL_int, NLInterface), "ERROR: NL_Process's NL_int argument is not an NLInterface instance"
-
-    out_store = NL_int.output_NL_queue
-
     while True:
-        frame = yield out_store.get()
+        datagram = yield NL_int.output_NL_queue.get()
 
-        dest_IP = frame.ip_datagram.get_dest_IP()
+        dest_IP = datagram.get_dest_IP()
         # Passing through a router means moving to a new subnet.
         # Thus, a new dest_MAC address is needed which is either in the ARP table, or else needs to be queried via
         #  ARP.  The src_MAC also must be updated to the MAC address of this interface.
@@ -145,154 +125,193 @@ def NetOutputProcess(env, NL_int):
         dest_dict = NL_int.ARP_table.get(next_IP, {})
         next_MAC = dest_dict.get("MAC", -1) if dest_dict != {} else -1
 
-        if next_MAC != -1:
+        if next_MAC != -1: # If ARP table has an entry for this dest_IP
             # remove this frame from the ARP list if it is there.
             try:
-                NL_int.ARP_list.remove(frame)
+                NL_int.ARP_list.remove(datagram)
             except ValueError:
                 # I don't care if it's not there.  Don't do anything.
                 pass
+            frame = EthernetFrame(EthernetHeader(NL_int.MAC_address, next_MAC), datagram)
+            yield env.timeout(1)
+            DatagramEncapsulated(env).succeed(value = str(frame))
+            # If we know the MAC address associated with the destination IP, then put the frame in the LL output store
+            print "NL_int IP", NL_int.IP_address, 'sending packet', str(frame)
+            yield NL_int.output_LL_queue.put(frame)
 
-            # If we know the MAC address associated with the destination IP, then send,
-            # updating both the dest_MAC and src_MAC fields of the EthernetFrame
-            frame.set_src_MAC(NL_int.MAC_address)
-            frame.set_dest_MAC(next_MAC)
-
-            print "NL_int IP", NL_int.IP_address, 'sending packet', frame
-            # TODO remove this line
-            #yield env.timeout(NL_int.connection.get_latency())
-            # Send packet out onto connection
-            yield src.Network.env.process(PhysProcess(frame, NL_int))
-            # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
-            src.Network.env.process(deliver_frame(frame, NL_int))
-            print 'NL_int IP', NL_int.IP_address, 'finished sending', frame
-
-        else:
-            if not (frame in NL_int.ARP_list):
+        else: # if ARP table does not have an entry for this dest_IP
+            if not (datagram in NL_int.ARP_list):
                 # If we do not know where to send it, and aren't already waiting for an ARP reply, we must leave the
                 # packet in the queue, and enact ARP.
-                print "IP", NL_int.IP_address, "sending ARP query"
                 arp_frame = NL_int.make_ARP_frame(NL_int.IP_address, dest_IP, NL_int.MAC_address)
 
-                #TODO this may no longer be necessary
-                NL_int.node.add_packet(NL_int, arp_frame)
+                print 'NL_int IP', str(NL_int.IP_address), 'sending ARP query'
 
-                print 'NL_int IP', str(NL_int.IP_address), 'sending ARP query', str(arp_frame)
-                # TODO remove this line
-                #yield env.timeout(NL_int.connection.get_latency())
-                # send the frame out onto the connection
-                yield src.Network.env.process(PhysProcess(arp_frame, NL_int))
-                # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
-                src.Network.env.process(deliver_frame(arp_frame, NL_int))
-                print 'NL_int IP', NL_int.IP_address, 'finished sending ARP query', arp_frame
+                # queue an ARP frame to be sent by the link layer.
+                yield env.timeout(1)
+                yield NL_int.output_LL_queue.put(arp_frame)
+                print 'NL_int IP', NL_int.IP_address, 'pushed ARP query to LL', arp_frame
 
-                NL_int.ARP_list.append(frame)
-
+                NL_int.ARP_list.append(datagram)
             else:
                 #If this packet is already waiting on an ARP reply, don't send another one.
                 print 'NL_int IP', NL_int.IP_address, 'waiting for ARP...'
-            #TODO don't like this.
-            out_store.put(frame)
+            # TODO don't like this. Would maybe be better if I could avoid removing it from the store at all.
+            # TODO That said, this is somewhat more efficient, as one packet waiting on ARP won't plug up the system.
+            # Whether it's in the ARP list or not, the datagram is waiting on ARP, now, so it needs to go back in
+            # the output queue.
+            NL_int.output_NL_queue.put(datagram)
+            # Have to wait at bit here, otherwise the get at the top succeeds immediately and nothing ever happens.
             yield src.Network.env.timeout(1)
 
-def LinkInputProcess(env, LL_int):
-   # assert isinstance(LL_int, LLInterface()) and not isinstance(LL_int, NLInterface),\
-    #    "ERROR: LL_Process's LL_int argument is not an LLInterface instance"
+def NetInputProcess(env, NL_int):
+    in_store = NL_int.input_NL_queue
+    router = NL_int.node
 
-    in_store = LL_int.input_LL_queue
-    switch = LL_int.node
+    while True:
+        datagram = yield in_store.get()
+
+        other_node = NL_int.connection.other_interface(NL_int).node.node_id
+        this_node = NL_int.node.node_id
+        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(datagram))
+
+        dest_IP = datagram.get_dest_IP()
+
+        # If the datagram is destined for some other IP (for now, nothing talks directly to Routers, so delete if it
+        # is for this Router.)
+        if dest_IP != NL_int.IP_address:
+            # forward the frame
+            next_interface = router.next_hop(dest_IP)["Interface"]
+            # If the other interface's output queue is full, wait until it isn't.
+            print "NL_int IP", NL_int.IP_address, 'forwarding packet', datagram
+            yield env.timeout(1)
+            yield next_interface.output_NL_queue.put(datagram)
+        else:
+            if isinstance(NL_int.node, Node.Host):
+                yield env.timeout(1)
+                DatagramDecapsulated(env).succeed(value=str(datagram))
+                yield NL_int.node.input_TL_queue.put(datagram.segment)
+
+        # else: ignore the frame
+
+
+def LinkInputProcess(env, interface):
+
+    in_store = interface.input_LL_queue
+    node = interface.node
 
     while True:
         frame = yield in_store.get()
 
-        other_node = LL_int.connection.other_interface(LL_int).node.node_id
-        this_node = LL_int.node.node_id
+        other_node = interface.connection.other_interface(interface).node.node_id
+        this_node = interface.node.node_id
         info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
 
         PacketArrived(src.Network.env).succeed(value=info)
-        # Forward the frame, if I know where to send it
 
-        # Add/refresh entry in switch table for src_MAC
-        switch.switch_table[frame.get_src_MAC()] = {'Interface': LL_int.id, 'TTL': switch.DEFAULT_TTL}
+        # Behaviour of this process depends on if the node is a Switch or a Router
 
-        # Determine the next interface this frame would go on.
-        next_interface = switch.next_interface(frame.get_dest_MAC())
+        if isinstance(node, Node.Router):
+            # If the node is a Router, then the link layer has only to move the recieved frame up to the Network layer
+            # and decapsulate it.
+            # If it has my MAC, might need to process.
+            if frame.get_dest_MAC() == interface.MAC_address or frame.get_dest_MAC() == 0:
+                if interface.is_ARP_packet(frame):
+                    # If it is ARP, then I can deal with it now.  No need to process.
 
-        # If I know where this frame should go next:
-        if next_interface != -1:
-            if next_interface != LL_int.id:
-                print LL_int, 'forwarding frame', frame
-                yield switch.interfaces[next_interface].output_LL_queue.put(frame)
-                # Will wait until it is possible to put the frame in the relevant output queue.
-            # else: ignore the frame. They shouldn't be addressed to switches.
-        else:
-            # If I don't know where to send it, send it to everyone.
-            for id, interface in switch.interfaces.iteritems():
-                if not id == LL_int.id:
-                    # TODO where do switches drop packets during congestion?
-                    print "LL_int MAC", LL_int.MAC_address, 'broadcasting frame', frame
-                    yield interface.output_LL_queue.put(frame)
-                    # Assume switches buffer output frames, but not input frames, because
-                    # they can only receive one at a time.
+                    # Construct an ARP reply
+                    result = interface.process_ARP_packet(interface, frame)
+
+                    # If we need to reply, put the reply frame directly into the interface's link layer output queue
+                    if result is not None:
+                        yield env.timeout(1)
+                        yield interface.output_LL_queue.put(result)
+                    # else: update ARP table (done in process_ARP_packet(...))
+                else:  # If the packet is for me and not an ARP packet, I need to raise it to network level.
+                    yield env.timeout(1)
+                    FrameDecapsulated(env).succeed(value=str(frame))
+                    yield interface.input_NL_queue.put(frame.ip_datagram)
+        elif isinstance(node, Node.Switch):
+            # If the node is a Switch, then the link layer must perform forwarding or broadcasting as appropriate.
+            switch = node
+            # Forward the frame, if I know where to send it
+
+            # Add/refresh entry in switch table for src_MAC
+            switch.switch_table[frame.get_src_MAC()] = {'Interface': interface.id, 'TTL': switch.DEFAULT_TTL}
+
+            # Determine the next interface this frame would go on.
+            next_interface = switch.next_interface(frame.get_dest_MAC())
+
+            # If I know where this frame should go next:
+            if next_interface != -1:
+                if next_interface != interface.id:
+                    print interface, 'forwarding frame', frame
+                    yield env.timeout(1)
+                    yield switch.interfaces[next_interface].output_LL_queue.put(frame)
+                    # Will wait until it is possible to put the frame in the relevant output queue.
+                # else: ignore the frame. They shouldn't be addressed to switches.
+            else:
+                # If I don't know where to send it, send it to everyone.
+                yield env.timeout(1)
+                for id, interface in switch.interfaces.iteritems():
+                    if not id == interface.id:
+                        # TODO where do switches drop packets during congestion?
+                        print "LL_int MAC", interface.MAC_address, 'broadcasting frame', frame
+                        yield interface.output_LL_queue.put(frame)
+                        # Assume switches buffer output frames, but not input frames, because
+                        # they can only receive one at a time.
 
 def LinkOutputProcess(env, LL_int):
-    # assert isinstance(LL_int, LLInterface()) and not isinstance(LL_int, NLInterface),\
-    #    "ERROR: LL_Process's LL_int argument is not an LLInterface instance"
-
     out_store = LL_int.output_LL_queue
 
     while True:
         frame = yield out_store.get()
         print "LL_int MAC", LL_int.MAC_address, 'sending frame', frame
-        # TODO remove this line
-        #yield env.timeout(LL_int.connection.get_latency())
         # send the frame out onto the connection
-        yield src.Network.env.process(PhysProcess(frame, LL_int))
-        # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
-        src.Network.env.process(deliver_frame(frame, LL_int))
-        print 'LL_int MAC', LL_int.MAC_address, 'finished sending', frame
+        yield src.Network.env.process(PhysOutputProcess(env, frame, LL_int))
 
-def PhysProcess(frame, interface):
+def PhysOutputProcess(env, frame, interface):
     # Write the frame bit string onto the connection
 
     # write to connection once per time step by setting the connection state
     for bit in frame.get_bit_string():
-        print "setting connection state to", bit
         # Trigger event to change connection state so it shows up in trace and GUI.
         connection = interface.connection
+        connection.state = bit
         string = 'Conn:id:%s state:%s' % (connection.connection_id, connection.state)
         src.Network.network.connectionStates[interface.connection].succeed(string)
         # Reset the connection state event
         src.Network.network.connectionStates[interface.connection] = simpy.events.Event(src.Network.env)
         yield src.Network.env.timeout(1)
 
-    #trigger PacketSent event for
-        other_interface = interface.connection.other_interface(interface)
-        other_node = other_interface.node.node_id
-        this_node = interface.node.node_id
-        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
+    # trigger PacketSent event for trace
+    other_interface = interface.connection.other_interface(interface)
+    other_node = other_interface.node.node_id
+    this_node = interface.node.node_id
+    info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
 
-        PacketSent(src.Network.env).succeed(value=info)
+    PacketSent(src.Network.env).succeed(value=info)
 
-def deliver_frame(frame, interface):
+    # Let it carry on down the line.  I don't need to wait for it (spawn a new process to model propagation)
+    env.process(PhysInputProcess(env, frame, interface))
+
+def PhysInputProcess(env, frame, interface):
     # propagate frame across the connection to the other interface
     yield src.Network.env.timeout(interface.connection.get_latency())
 
-    # Move the frame into the other interface's input queue.  If the queue is full, the frame will be dropped.
-    other_interface = interface.connection.other_interface(interface)
-    if isinstance(other_interface, src.Interfaces.NLInterface):
-        interface.connection.other_interface(interface).input_NL_queue.dropPut(frame)
-    else: interface.connection.other_interface(interface).input_LL_queue.dropPut(frame)
-
-
+    # Move the frame into the other interface's link layer input queue.
+    # If the queue is full, the frame will be dropped.
+    interface.connection.other_interface(interface).input_LL_queue.dropPut(frame)
 
 
 def trace_cb(event):
-    # TODO uncomment to clean up trace file
-    if not isinstance(event, (DropStoreGet, DropStorePut, simpy.Timeout)):
+    if not isinstance(event, (DropStoreGet, DropStorePut, simpy.Timeout, simpy.events.Initialize, simpy.Process)):
         env = event.env
         value = event.value
         string = '%d event:%s value:%s' % (env.now, event, value)
+
+        # TODO remove this line
+        print string + '\n'
 
         trace = src.Network.trace
         trace.write(string)

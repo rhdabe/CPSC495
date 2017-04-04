@@ -29,7 +29,6 @@ except AttributeError:
 
 class Ui_MainWindow(object):
 
-
     def setupUi(self, MainWindow):
 
         self.simulation_thread = None

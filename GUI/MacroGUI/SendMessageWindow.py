@@ -117,7 +117,6 @@ class SendMessage_Window(object):
         # TODO make this less annoying somehow: always resets to first element
         # TODO probably makes more sense to add another dock widget to the main window for this function
 
-
         # Clear the current dropdown information.
         self.toComboBox.clear()
         self.toComboBox.clearEditText()
@@ -133,17 +132,22 @@ class SendMessage_Window(object):
         # Use this for sending the standard string to the network/nodes.
         # Send message to the toNode.
 
-        UDP = self.UDPradioButton.isChecked();
-        dest_IP = self.toComboBox.currentText()
-        src_IP = self.fromComboBox.currentText()
+        t_protocol = "UDP"
+
+        TCP = self.TCPradioButton.isChecked()
+        if TCP:
+            t_protocol = "TCP"
+
+        dest_IP = int(self.toComboBox.currentText())
+        src_IP = int(self.fromComboBox.currentText())
         message = ""
 
-        if UDP:
-            message += "UDP TO: "
-        else:
+        if TCP:
             message += "TCP TO: "
+        else:
+            message += "UDP TO: "
 
         message += str(dest_IP) + " FROM: " + str(src_IP)
 
-        src.Network.network.hosts[int(src_IP)].send_message(int(dest_IP), message, UDP)
+        src.Network.network.hosts[int(src_IP)].send_message(message, src_IP, dest_IP, trans_protocol=t_protocol)
 

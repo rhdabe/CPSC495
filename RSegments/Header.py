@@ -6,7 +6,7 @@ __version__ = "1.0.0"
 
 # Parent Header
 class Header:
-    def __init__(self, source_port, destination_port, header_length):
+    def __init__(self, source_port, destination_port, header_length = 0):
         self.src_port = source_port
         self.dest_port = destination_port
         self.length = header_length
@@ -14,13 +14,13 @@ class Header:
 
     # default print notation when printing a header
     def __str__(self):
-        return "src/dest port:%s/%s, length:%s, checksum:%s" % (
+        return "src/dest port:%s/%s length:%s checksum:%s" % (
             self.src_port, self.dest_port, self.length, self.checksum)
 
 
 # Header for UDP Segments
 class UDPHeader(Header):
-    def __init__(self, source_port, destination_port, header_length):
+    def __init__(self, source_port, destination_port, header_length = 0):
         Header.__init__(self, source_port, destination_port, header_length)
         self.checksum = (~(self.src_port + self.dest_port + self.length) + 1) % 65535
 
@@ -43,7 +43,7 @@ class UDPHeader(Header):
 # Accepts 3 args if you only want to init ports & length
 # Accepts 7 args if you also want to define sequence#, acknowledgemnt#, window size, and urgent data pointer
 class TCPHeader(Header):
-    def __init__(self, source_port, destination_port, header_length, sequence_number=None, acknowledgement_number=None, window=None, urgent_data_ptr=None):
+    def __init__(self, source_port, destination_port, header_length = 0, sequence_number=None, acknowledgement_number=None, window=None, urgent_data_ptr=None):
         Header.__init__(self, source_port, destination_port, header_length)
         if sequence_number is None or acknowledgement_number is None or window is None or urgent_data_ptr is None:
             self.sequence_num = None

@@ -7,7 +7,7 @@ from RSegments.Segment import *
 from RSegments.Header import *
 from Packet import Packet
 from NQueue import NQueue
-import SimPyStuff
+from SimPyStuff import *
 
 
 '''
@@ -88,33 +88,12 @@ class Switch(Node):
         # Used to uniquely index the interfaces in the interfaces table.
         self.local_interface_id = 0
 
-        #TODO consider removing this if it is no longer necessary
-        self.packets = {}
-
-
 
     def new_interface(self):
         newInterface = Interfaces.LLInterface(self)
         self.interfaces[newInterface.id] = newInterface
         self.local_interface_id += 1
         return newInterface
-
-# TODO consider removing this method
-    def add_packet(self, interface, frame):
- #       print "Host IP", self.interfaces[0].IP_address, "adding packet", frame
-        self.packets[frame] = Packet(interface, frame)
- #       print self.packets
-
-# TODO consider removing this method
-    def remove_packet(self, frame):
-        # print "Host IP", self.interfaces[0].IP_address, "deleting packet", frame
-        # print "packets pre-delete"
-        # print self.packets
-        try:
-            del self.packets[frame]
-        except:
-            pass
-        # print self.packets
 
     def next_interface(self, dest_MAC):
         # If the switch table contains the next interface for dest_MAC, return its id, else return 0,
@@ -172,19 +151,26 @@ class Router(Switch):
         return string
 
 class Host(Router):
-
     def __init__(self):
         Router.__init__(self)
         self.new_interface()
-        self.messages = []
-        self.input_AL_queue = NQueue()
-        self.input_AL_process = Network.env.process(SimPyStuff.AppInputProcess(Network.env, self.input_AL_queue))
-        self.output_AL_Queue = NQueue()
-        self.output_AL_process = Network.env.process(SimPyStuff.AppOutputProcess(Network.env, self.output_AL_Queue))
-        self.input_TL_queue = NQueue()
-        self.input_TL_process = Network.env.process(SimPyStuff.TranInputProcess(Network.env, self.input_AL_queue))
-        self.output_TL_Queue = NQueue()
-        self.output_TL_process = Network.env.process(SimPyStuff.TranOutputProcess(Network.env, self.output_AL_Queue))
+
+        # Define queues for modeling interaction between protocol stack layers
+        self.input_AL_queue = NQueue(1)
+        self.output_AL_queue = NQueue(1)
+        self.input_TL_queue = NQueue(1)
+        self.output_TL_queue = NQueue(1)
+        self.net_output_queue = NQueue(1)
+
+        # Define SimPy processes to manage the queues
+        self.input_AL_process = Network.env.process(AppInputProcess(Network.env, self.input_AL_queue))
+        self.output_AL_process = Network.env.process(AppOutputProcess(Network.env,
+                                                                     self.output_AL_queue, self.output_TL_queue))
+        self.input_TL_process = Network.env.process(TranInputProcess(Network.env,
+                                                                     self.input_TL_queue, self.input_AL_queue))
+        self.output_TL_process = Network.env.process(TranOutputProcess(Network.env,
+                                                                       self.output_TL_queue, self.net_output_queue))
+        self.host_output_process = Network.env.process(HostNetOutputProcess(self.net_output_queue, self))
 
     def new_interface(self):
         # Restrict Hosts to have a single IP address for simplicity of message sending.
@@ -193,48 +179,13 @@ class Host(Router):
             self.interfaces[newInterface.id] = newInterface
         return self.interfaces.values()[0]
 
+    # TODO assumes only one interface.  This may change.
     def get_IP_address(self):
         return self.interfaces.values()[0].IP_address
 
-    '''
-    Create a UDP/TCP segment, then encapsulate it in an IPDatagram and let the Router code process it.
-    '''
-    def send_message(self, dest_IP, message_string, UDP):
-        # Randomly select a port number just to show that replies come back to the same port.
-        src_port = random.randrange(0, 10000)
-        dest_port = random.randrange(0, 10000)
+    def send_message(self, msg, startIP, endIP, app_protocol = "Default", trans_protocol = "UDP"):
 
-        # Select transport protocol based on use input in SendMessageWindow
-        if(UDP):
-            self.create_messageUDP(self.get_IP_address(), dest_IP, src_port, dest_port, message_string)
-        else:
-            self.create_messageTCP(self.get_IP_address(), dest_IP, src_port, dest_port, message_string)
+         message = Message(msg, startIP, endIP,app_protocol, trans_protocol)
 
-
-    #TODO redo all of this!!!
-    '''
-    Create a new UDP message
-    '''
-    def create_messageUDP(self, startIP, endIP, src_port, dest_port, messageString):
-
-        segment = UDPSegment(UDPHeader(src_port, dest_port, 0), messageString)
-        self.create_message(startIP, endIP, segment)
-
-    '''
-    create a new TCP message
-    '''
-    def create_messageTCP(self, startIP, endIP, src_port, dest_port, messageString):
-        segment = TCPSegment(TCPHeader(src_port, dest_port, 0), messageString)
-        self.create_message(startIP, endIP, segment)
-
-    '''encapsulate message in IP datagram and EthernetFrame then place in NL_Interface input queue to be routed'''
-    def create_message(self, startIP, endIP, UDP_TCP_segment):
-        interface = self.interfaces[0]
-        ip_datagram = IPDatagram(IPHeader(startIP, endIP), UDP_TCP_segment)
-        # The 0 destination MAC address doesn't matter.  The correct MAC will be determined in the NL_Interface.
-        frame = EthernetFrame(EthernetHeader(interface.MAC_address, 0), ip_datagram)
-
-        self.interfaces[0].output_NL_queue.put(frame)
-
-        self.add_packet(self.interfaces[0], frame)
+         self.output_AL_queue.put(message)
 
