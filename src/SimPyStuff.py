@@ -24,6 +24,8 @@ class PacketEncapsulated(simpy.Event):
 class PacketDecapsulated(simpy.Event):
     pass
 
+class ConnectionSet(simpy.Event):
+    pass
 
 class DropStore(simpy.Store):
     def dropPut(self, item):
@@ -87,8 +89,12 @@ def LL_Output_Port(env, LL_int):
     while True:
         frame = yield out_store.get()
         print "LL_int MAC", LL_int.MAC_address, 'sending frame', frame
-        yield env.timeout(LL_int.connection.get_latency())
-        send_frame(frame, LL_int)
+        # TODO remove this line
+        #yield env.timeout(LL_int.connection.get_latency())
+        # send the frame out onto the connection
+        yield src.Network.env.process(send_frame(frame, LL_int))
+        # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
+        src.Network.env.process(deliver_frame(frame, LL_int))
         print 'LL_int MAC', LL_int.MAC_address, 'finished sending', frame
 
 
@@ -170,8 +176,12 @@ def NL_Output_Port(env, NL_int):
             frame.set_dest_MAC(next_MAC)
 
             print "NL_int IP", NL_int.IP_address, 'sending packet', frame
-            yield env.timeout(NL_int.connection.get_latency())
-            send_frame(frame, NL_int)
+            # TODO remove this line
+            #yield env.timeout(NL_int.connection.get_latency())
+            # Send packet out onto connection
+            yield src.Network.env.process(send_frame(frame, NL_int))
+            # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
+            src.Network.env.process(deliver_frame(frame, NL_int))
             print 'NL_int IP', NL_int.IP_address, 'finished sending', frame
 
         else:
@@ -185,10 +195,13 @@ def NL_Output_Port(env, NL_int):
                 NL_int.node.add_packet(NL_int, arp_frame)
 
                 print 'NL_int IP', str(NL_int.IP_address), 'sending ARP query', str(arp_frame)
-
-                yield env.timeout(NL_int.connection.get_latency())
-                send_frame(arp_frame, NL_int)
-                print 'NL_int IP', NL_int.IP_address, 'finisehd sending ARP query', arp_frame
+                # TODO remove this line
+                #yield env.timeout(NL_int.connection.get_latency())
+                # send the frame out onto the connection
+                yield src.Network.env.process(send_frame(arp_frame, NL_int))
+                # Let it carry on down the line.  I don't need to wait for it (spawn a new process to take care of delivery)
+                src.Network.env.process(deliver_frame(arp_frame, NL_int))
+                print 'NL_int IP', NL_int.IP_address, 'finished sending ARP query', arp_frame
 
                 NL_int.ARP_list.append(frame)
 
@@ -200,37 +213,40 @@ def NL_Output_Port(env, NL_int):
             yield src.Network.env.timeout(1)
 
 def send_frame(frame, interface):
-    # It is possible that the connection has been deleted mid transmission,
-    # In which case, the connection and connectionStates event no longer exist.
-    # If this happens, then just move on.
+    # Write the frame bit string onto the connection
 
-    # TODO nothing happens if this is uncommented.  Literally nothing.  Debugger won't touch it. yield might be bad here
-    # try:
-    #     for bit in frame.get_bit_string():
-    #         print "setting connection state to", bit
-    #         # Trigger event to change connection state so it shows up in trace and GUI.
-    #         src.Network.network.connectionStates[interface.connection].succeed(bit)
-    #         # Reset the connection state event
-    #         src.Network.network.connectionStates[interface.connection] = simpy.events.Event()
-    #         yield simpy.Timeout(1)
-    # except KeyError:
-    #     pass
-   # Move the frame into the other interface's input queue.  If the queue is full, the frame will be dropped.
+    # write to connection once per time step by setting the connection state
+    for bit in frame.get_bit_string():
+        print "setting connection state to", bit
+        # Trigger event to change connection state so it shows up in trace and GUI.
+        src.Network.network.connectionStates[interface.connection].succeed(bit)
+        # Reset the connection state event
+        src.Network.network.connectionStates[interface.connection] = simpy.events.Event(src.Network.env)
+        yield src.Network.env.timeout(1)
 
+    #trigger PacketSent event for
+        other_interface = interface.connection.other_interface(interface)
+        other_node = other_interface.node.node_id
+        this_node = interface.node.node_id
+        info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
+
+        PacketSent(src.Network.env).succeed(value=info)
+
+def deliver_frame(frame, interface):
+    # propagate frame across the connection to the other interface
+    yield src.Network.env.timeout(interface.connection.get_latency())
+
+    # Move the frame into the other interface's input queue.  If the queue is full, the frame will be dropped.
     other_interface = interface.connection.other_interface(interface)
-
     if isinstance(other_interface, src.Interfaces.NLInterface):
         interface.connection.other_interface(interface).input_NL_queue.dropPut(frame)
     else: interface.connection.other_interface(interface).input_LL_queue.dropPut(frame)
 
-    other_node = other_interface.node.node_id
-    this_node = interface.node.node_id
-    info = "from node: %d to node: %d frame: %s" % (this_node, other_node, str(frame))
 
-    PacketSent(src.Network.env).succeed(value=info)
 
 
 def trace_cb(event):
+    # TODO uncomment to clean up trace file
     if not isinstance(event, (DropStoreGet, DropStorePut, simpy.Timeout)):
         env = event.env
         value = event.value

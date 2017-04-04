@@ -62,7 +62,20 @@ def timid_consumer(name, env, store):
         event.cancel()
         print(name, 'cancelled')
 
-env = simpy.Environment()
+def spawner(env, cb, arg):
+
+    while True:
+        yield env.process(cb(arg))
+
+
+def callback(arg):
+    yield simpy.Timeout(arg)
+    print 'made it'
+    env.exit()
+
+env = simpy.Environment(src.SimPyStuff.trace_cb)
+#sp = env.process(spawner(env, callback, 5))
+
 store1 = DropStore(env, capacity=2)
 # store2 = DropStore(env, capacity=2)
 prod1 = env.process(producer("p1", env, store1,3))
