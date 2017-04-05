@@ -412,23 +412,10 @@ class Ui_MainWindow(object):
         self.placeConnectionGraphic(simConnection.connection_id, simConnection.connectionType, gnode1, gnode2)
 
         # Recompute routing tables to account for new connection
-        self.recomputeRoutingTables()
-
-    def isConnectionSelected(self, endNodesTuple):
-        if self.selectedConnections.__contains__(endNodesTuple): return True
-        else: return False
-
-    def checkModifyConnection(self):
-        if len(self.selectedConnections) == 1: self.btnModifyConnection.setEnabled(True)
-        else: self.btnModifyConnection.setEnabled(False)
-
-    def checkAddConnection(self):
-        if len(self.selectedNodes) == 2: self.btnAddConnection.setEnabled(True)
-        else: self.btnAddConnection.setEnabled(False)
-
-    def checkDeleteConnections(self):
-        if len(self.selectedConnections) > 0: self.btnDeleteConnection.setEnabled(True)
-        else: self.btnDeleteConnection.setEnabled(False)
+        try:
+            self.recomputeRoutingTables()
+        except Exception:
+            print "recomputeRoutingTables is whining."
 
     def deleteSelectedConnections(self):
         for connection in self.selectedConnections:
@@ -436,8 +423,10 @@ class Ui_MainWindow(object):
             self.connections.remove(connection)
             # remove simulation connection
             src.Network.network.remove_connection(connection[0], connection[1])
-
-        self.recomputeRoutingTables()
+        try:
+            self.recomputeRoutingTables()
+        except Exception:
+            print "recomputeRoutingTables() is whining"
 
         # Remove all selected connection GUI elements.
         self.selectedConnections = []
@@ -475,14 +464,30 @@ class Ui_MainWindow(object):
 
         self.clearAndRepaint()
 
+    def isConnectionSelected(self, endNodesTuple):
+        if self.selectedConnections.__contains__(endNodesTuple): return True
+        else: return False
+
+    def checkModifyConnection(self):
+        if len(self.selectedConnections) == 1: self.btnModifyConnection.setEnabled(True)
+        else: self.btnModifyConnection.setEnabled(False)
+
+    def checkAddConnection(self):
+        if len(self.selectedNodes) == 2: self.btnAddConnection.setEnabled(True)
+        else: self.btnAddConnection.setEnabled(False)
+
+    def checkDeleteConnections(self):
+        if len(self.selectedConnections) > 0: self.btnDeleteConnection.setEnabled(True)
+        else: self.btnDeleteConnection.setEnabled(False)
+
     def clearAndRepaint(self):
         while self.frameMain.children():
             child = self.frameMain.children()[0]
-            child.setParent(None) #  Immediately removes child from children list of parent
-            child.deleteLater() #  Don't care when this happens.  Want to avoid sip.delete() hangups.
-           #  sip.delete(self.frameMain.children()[0])
-                #  sip.delete() hangs up sometimes for unknown reason.
-                #  Node number and deletion order dependent.  Highly reproducible.
+            child.setParent(None)  # Immediately removes child from children list of parent
+            child.deleteLater()  # Don't care when this happens.  Want to avoid sip.delete() hangups.
+            # sip.delete(self.frameMain.children()[0])
+            # sip.delete() hangs up sometimes for unknown reason.
+            # Node number and deletion order dependent.  Highly reproducible.
         self.rebuildFrameMainGraphics()
 
     def rebuildFrameMainGraphics(self):
