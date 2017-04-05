@@ -5,7 +5,7 @@ from Header import UDPHeader
 """Segment.py: For creating segments containing a header & message"""
 __author__ = "Ryan Paulitschke"
 __version__ = "1.0.0"
-
+import copy
 
 class Segment:
     # Initializes segment variables
@@ -16,7 +16,7 @@ class Segment:
 
     # default print notation when printing a Segment
     def __str__(self):
-        return "segment_header:%s message:%s" % (self.header, self.message)
+        return "segment_header: %s message: %s" % (self.header, self.message)
 
 
 class TCPSegment(Segment):
@@ -29,3 +29,4 @@ class UDPSegment(Segment):
     def __init__(self, segment_header, msg):
         assert isinstance(segment_header, UDPHeader), "ERROR: %s IS NOT A UDP HEADER" % (segment_header)
         Segment.__init__(self, segment_header, msg)
+

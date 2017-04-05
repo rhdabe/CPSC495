@@ -414,19 +414,6 @@ class Ui_MainWindow(object):
         # Recompute routing tables to account for new connection
         self.recomputeRoutingTables()
 
-    def deleteSelectedConnections(self):
-        for connection in self.selectedConnections:
-            # remove GUI connection
-            self.connections.remove(connection)
-            # remove simulation connection
-            del(src.Network.network.connections[connection])
-
-        self.recomputeRoutingTables()
-
-        # Remove all selected connection GUI elements.
-        self.selectedConnections = []
-        self.clearAndRepaint()
-
     def isConnectionSelected(self, endNodesTuple):
         if self.selectedConnections.__contains__(endNodesTuple): return True
         else: return False
@@ -434,12 +421,27 @@ class Ui_MainWindow(object):
     def checkModifyConnection(self):
         if len(self.selectedConnections) == 1: self.btnModifyConnection.setEnabled(True)
         else: self.btnModifyConnection.setEnabled(False)
+
     def checkAddConnection(self):
         if len(self.selectedNodes) == 2: self.btnAddConnection.setEnabled(True)
         else: self.btnAddConnection.setEnabled(False)
+
     def checkDeleteConnections(self):
         if len(self.selectedConnections) > 0: self.btnDeleteConnection.setEnabled(True)
         else: self.btnDeleteConnection.setEnabled(False)
+
+    def deleteSelectedConnections(self):
+        for connection in self.selectedConnections:
+            # remove GUI connection
+            self.connections.remove(connection)
+            # remove simulation connection
+            src.Network.network.remove_connection(connection[0], connection[1])
+
+        self.recomputeRoutingTables()
+
+        # Remove all selected connection GUI elements.
+        self.selectedConnections = []
+        self.clearAndRepaint()
 
     def modifyConnection(self):
         #Checking of whether connection modification is allowed is handled by enabling/disabling btnModifyConnection.
@@ -476,11 +478,11 @@ class Ui_MainWindow(object):
     def clearAndRepaint(self):
         while self.frameMain.children():
             child = self.frameMain.children()[0]
-            child.setParent(None) #Immediately removes child from children list of parent
-            child.deleteLater() #Don't care when this happens.  Want to avoid sip.delete() hangups.
-           # sip.delete(self.frameMain.children()[0])
-                #sip.delete() hangs up sometimes for unknown reason.
-                # Node number and deletion order dependent.  Highly reproducible.
+            child.setParent(None) #  Immediately removes child from children list of parent
+            child.deleteLater() #  Don't care when this happens.  Want to avoid sip.delete() hangups.
+           #  sip.delete(self.frameMain.children()[0])
+                #  sip.delete() hangs up sometimes for unknown reason.
+                #  Node number and deletion order dependent.  Highly reproducible.
         self.rebuildFrameMainGraphics()
 
     def rebuildFrameMainGraphics(self):

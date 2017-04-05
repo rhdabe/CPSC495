@@ -265,7 +265,7 @@ def LinkInputProcess(env, interface):
                     if id != interface.id:
                         # TODO where do switches drop packets during congestion?
                         print "LL_int MAC", interface.MAC_address, 'broadcasting frame', frame
-                        yield other_int.output_LL_queue.put(frame)
+                        yield other_int.output_LL_queue.put(copy.deepcopy(frame))
                         # Assume switches buffer output frames, but not input frames, because
                         # they can only receive one at a time.
 
@@ -316,7 +316,7 @@ def trace_cb(event):
     if not isinstance(event, (DropStoreGet, DropStorePut, simpy.Timeout, simpy.events.Initialize, simpy.Process)):
         env = event.env
         value = event.value
-        string = '%d event:%s value:%s' % (env.now, event, value)
+        string = '%d event: %s value: %s' % (env.now, event, value)
 
         # TODO remove this line
         print string + '\n'

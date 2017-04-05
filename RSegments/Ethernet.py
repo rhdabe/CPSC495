@@ -8,7 +8,7 @@ class EthernetHeader:
         self.dest_MAC = dst
 
     def __str__(self):
-        return "src_MAC:" + str(self.src_MAC) + " dest_MAC:" + str(self.dest_MAC)
+        return "src_MAC: %d dest_MAC: %d" % (self.src_MAC, self.dest_MAC)
         # return '{0:b}{1:b}'.format(self.src_MAC,self.dest_MAC)
 
 
@@ -36,4 +36,4 @@ class EthernetFrame:
         return "101"
 
     def __str__(self):
-        return 'ethernet_header:%s ip_datagram:%s' % (self.header, self.ip_datagram)
+        return 'ethernet_header: %s ip_datagram: %s' % (self.header, self.ip_datagram)
