@@ -13,5 +13,5 @@ class Message:
         Message.static_id += 1
 
     def __str__(self):
-        return 'MESSAGE:id:%d ap:%s tp:%s message:%s' %(self.message_id, self.application_protocol,
+        return 'id:%d ap:%s tp:%s message:%s' %(self.message_id, self.application_protocol,
                                                         self.transport_protocol, self.message)

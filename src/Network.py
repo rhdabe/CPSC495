@@ -5,6 +5,7 @@ from Interfaces import *
 import Node
 import simpy
 import os
+import SimPyStuff
 
 class Network:
     def __init__(self):
@@ -68,7 +69,7 @@ class Network:
         """
         pair_id = self.get_node_pair_id(n1_id, n2_id)
         self.connections[pair_id] = connection
-        self.connectionStates[connection] = simpy.events.Event(env)
+        self.connectionStates[connection] = SimPyStuff.ConnectionSet(env)
 
     def get_connection(self, n1_id, n2_id):
         return self.connections[self.get_node_pair_id(n1_id,n2_id)]

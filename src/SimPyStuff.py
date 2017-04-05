@@ -14,37 +14,44 @@ class DropStoreGet(simpy.resources.store.StoreGet):
 class DropStorePut(simpy.resources.store.StorePut):
     pass
 
-class PacketSent(simpy.Event):
+class TraceEvent(simpy.Event):
+    def __str__(self):
+        return str(type(self).__name__)
+
+class PacketSent(TraceEvent):
     pass
 
-class PacketArrived(simpy.Event):
+class PacketArrived(TraceEvent):
     pass
 
-class PacketDropped(simpy.Event):
+class PacketDropped(TraceEvent):
     pass
 
-class MessageReceived(simpy.Event):
+class MessageReceived(TraceEvent):
     pass
 
-class MessageEncapsulated(simpy.Event):
+class MessageEncapsulated(TraceEvent):
     pass
 
-class SegmentEncapsulated(simpy.Event):
+class SegmentEncapsulated(TraceEvent):
     pass
 
-class SegmentDecapsulated(simpy.Event):
+class SegmentDecapsulated(TraceEvent):
     pass
 
-class DatagramEncapsulated(simpy.Event):
+class DatagramEncapsulated(TraceEvent):
     pass
 
-class DatagramDecapsulated(simpy.Event):
+class DatagramDecapsulated(TraceEvent):
     pass
 
-class FrameDecapsulated(simpy.Event):
+class FrameDecapsulated(TraceEvent):
     pass
 
-class ConnectionSet(simpy.Event):
+class ConnectionSet(TraceEvent):
+    pass
+
+class PacketCreated(TraceEvent):
     pass
 
 class DropStore(simpy.Store):
@@ -143,8 +150,8 @@ def NetOutputProcess(env, NL_int):
             if not (datagram in NL_int.ARP_list):
                 # If we do not know where to send it, and aren't already waiting for an ARP reply, we must leave the
                 # packet in the queue, and enact ARP.
-                arp_frame = NL_int.make_ARP_frame(NL_int.IP_address, dest_IP, NL_int.MAC_address)
-
+                arp_frame = NL_int.make_ARP_frame(NL_int.IP_address, next_IP, NL_int.MAC_address)
+                PacketCreated(env).succeed(value=str(arp_frame))
                 print 'NL_int IP', str(NL_int.IP_address), 'sending ARP query'
 
                 # queue an ARP frame to be sent by the link layer.
@@ -205,7 +212,7 @@ def LinkInputProcess(env, interface):
 
         other_node = interface.connection.other_interface(interface).node.node_id
         this_node = interface.node.node_id
-        info = "from node:%d to node:%d frame:%s" % (this_node, other_node, str(frame))
+        info = "from node:%d to node:%d frame:%s" % (other_node, this_node, str(frame))
 
         PacketArrived(src.Network.env).succeed(value=info)
 
@@ -225,6 +232,7 @@ def LinkInputProcess(env, interface):
                     # If we need to reply, put the reply frame directly into the interface's link layer output queue
                     if result is not None:
                         yield env.timeout(1)
+                        PacketCreated(env).succeed(value=str(result))
                         yield interface.output_LL_queue.put(result)
                     # else: update ARP table (done in process_ARP_packet(...))
                 else:  # If the packet is for me and not an ARP packet, I need to raise it to network level.
@@ -253,11 +261,11 @@ def LinkInputProcess(env, interface):
             else:
                 # If I don't know where to send it, send it to everyone.
                 yield env.timeout(1)
-                for id, interface in switch.interfaces.iteritems():
-                    if not id == interface.id:
+                for id, other_int in switch.interfaces.iteritems():
+                    if id != interface.id:
                         # TODO where do switches drop packets during congestion?
                         print "LL_int MAC", interface.MAC_address, 'broadcasting frame', frame
-                        yield interface.output_LL_queue.put(frame)
+                        yield other_int.output_LL_queue.put(frame)
                         # Assume switches buffer output frames, but not input frames, because
                         # they can only receive one at a time.
 
@@ -281,7 +289,7 @@ def PhysOutputProcess(env, frame, interface):
         string = 'Conn:id:%s state:%s' % (connection.connection_id, connection.state)
         src.Network.network.connectionStates[interface.connection].succeed(string)
         # Reset the connection state event
-        src.Network.network.connectionStates[interface.connection] = simpy.events.Event(src.Network.env)
+        src.Network.network.connectionStates[interface.connection] = ConnectionSet(src.Network.env)
         yield src.Network.env.timeout(1)
 
     # trigger PacketSent event for trace

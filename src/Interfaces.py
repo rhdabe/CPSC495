@@ -83,7 +83,7 @@ class NLInterface (LLInterface):
 
             return None
 
-        elif NL_int.is_ARP_query(frame):
+        elif NL_int.is_ARP_query(frame) and frame.ip_datagram.get_dest_IP() == NL_int.IP_address:
             # Reply to ARP query
             print "IP", NL_int.IP_address, "replying to ARP query"
             sender_MAC = frame.get_src_MAC()
@@ -100,6 +100,8 @@ class NLInterface (LLInterface):
             NL_int.ARP_table[sender_IP] = {"MAC": sender_MAC, "TTL": NLInterface.DEFAULT_ARP_TTL}
 
             return frame
+        else:
+            return None
 
     def is_ARP_query(self, frame):
         datagram = frame.ip_datagram

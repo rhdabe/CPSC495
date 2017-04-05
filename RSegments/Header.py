@@ -14,7 +14,7 @@ class Header:
 
     # default print notation when printing a header
     def __str__(self):
-        return "src/dest port:%s/%s length:%s checksum:%s" % (
+        return "src_port:%s dest port:%s length:%s checksum:%s" % (
             self.src_port, self.dest_port, self.length, self.checksum)
 
 
@@ -95,6 +95,6 @@ class TCPHeader(Header):
 
     # default print notation when printing a header (Doesn't print Flag Field)
     def __str__(self):
-        return "src/dest port:%s/%s, length:%s, checksum:%s, seq#:%s, ack#:%s, window:%s, urgent ptr:%s" % (
+        return "src_port:%s dest_port:%s length:%s checksum:%s seq#:%s ack#:%s window:%s urgent ptr:%s" % (
             self.src_port, self.dest_port, self.length, self.checksum, self.sequence_num, self.ack_num,
             self.receive_window, self.urgent_data_pointer)
