@@ -1,7 +1,5 @@
 class Message:
 
-    # TODO add application layer protocol field
-    # TODO add transport layer protocol field
     static_id = 0
     def __init__(self, msg, s_IP, d_IP,a_p = "Default", t_p = "UDP"):
         self.message = msg

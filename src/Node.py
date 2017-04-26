@@ -6,7 +6,7 @@ import random
 from RSegments.Segment import *
 from RSegments.Header import *
 from Packet import Packet
-from NQueue import NQueue
+import NQueue
 from SimPyStuff import *
 
 
@@ -116,8 +116,6 @@ class Switch(Node):
         return string
 
 class Router(Switch):
-    # TODO: all network entities should include a step() function which performs the necessary operations to move them
-    # TODO: ahead one step in time.  Ex. Router needs to have the TTL fields in its ARP table decremented every step.
 
     def __init__(self):
         Switch.__init__(self)
@@ -179,7 +177,6 @@ class Host(Router):
             self.interfaces[newInterface.id] = newInterface
         return self.interfaces.values()[0]
 
-    # TODO assumes only one interface.  This may change.
     def get_IP_address(self):
         return self.interfaces.values()[0].IP_address
 

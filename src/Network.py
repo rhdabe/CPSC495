@@ -41,27 +41,6 @@ class Network:
     def get_node_pair_id(self, n1_id, n2_id):
         return (n1_id, n2_id) if n1_id <= n2_id else (n2_id, n1_id)
 
-    # def create_messageUDP(self, startIP, endIP, messageString):
-    #     startID = self.hosts[startIP].node_id
-    #     endID = self.hosts[startIP].node_id
-    #     # TODO The IDS are not important for message creation.  Should use port numbers.  Fix this.
-    #     segment = UDPSegment(UDPHeader(startID, endID, 0), messageString)
-    #     self.create_message(startID, endID, segment)
-    #
-    # def create_messageTCP(self, startIP, endIP, messageString):
-    #     startID = self.hosts[startIP].node_id
-    #     endID = self.hosts[startIP].node_id
-    #     # TODO The IDS are not important for message creation.  Should use port numbers.  Fix this.
-    #     segment = TCPSegment(TCPHeader(startID, endID), messageString)
-    #     self.create_message(startID, endID, segment)
-    #
-    # def create_message(self, startIP, endIP, UDP_TCP_segment):
-    #     startID = self.hosts[startIP].node_id
-    #     # TODO The IDS are not important for message creation.  Should use port numbers.  Fix this.
-    #     ip_datagram = IPDatagram(IPHeader(startIP,endIP), UDP_TCP_segment)
-    #     eth_frame = EthernetFrame(EthernetHeader(startIP, endIP), ip_datagram)
-    #     self.add_packet(Packet(self.nodes[startID], eth_frame))
-
 
     def add_connection(self, n1_id, n2_id, connection):
         """

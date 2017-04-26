@@ -3,12 +3,6 @@ class IPHeader:
     length = 16 # bits
 
     def __init__(self, src, dst):
-        # TODO potential implementation of hierarchical IP
-        # src and dst addresses are two-integer tuples satisfying the following constraints:
-        # assert 1 <= src[0] < 16, "ERROR: source IP is two 4 bit numbers excluding 0"
-        # assert 1 <= src[1] < 16, "ERROR: source IP is two 4 bit numbers excluding 0"
-        # assert 0 <= dst[0] < 16, "ERROR: destination IP is two 4 bit numbers including 0 (broadcast)"
-        # assert 0 <= dst[1] < 16, "ERROR: destination IP is two 4 bit numbers including 0 (broadcast)"
         self.src_IP = src
         self.dest_IP = dst
 

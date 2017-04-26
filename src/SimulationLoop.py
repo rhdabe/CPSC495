@@ -2,11 +2,13 @@
 __author__ = "Rhys Beck"
 __version__ = "1.0.0"
 
-import routingTableAlgorithm
 import threading
 import time
+
 import src.Network
 import src.StepFunctions
+from src import routingTableAlgorithm
+
 
 class SimThread(threading.Thread):
 
@@ -33,7 +35,6 @@ class SimThread(threading.Thread):
         self.lock = threading.RLock()
 
     def run(self):
-        #TODO fix docstring
         """Executes function(args) every updateInterval (ms).  If updateInterval<0 or unspecified, runs continuously.
         args is a tuple specifying the arguments to function, defaults to ()
         updateInterval is an integer indicating how many milliseconds should elapse between functino calls. Defaults to
@@ -100,7 +101,7 @@ def start_simulation(network, function, updateInterval=-1, numLoops = -1):
     :rtype SimThread"""
 
     #compute routing tables for each node
-    tables=routingTableAlgorithm.routingTables(network)
+    tables= routingTableAlgorithm.routingTables(network)
 
     #insert routing tables into the nodes
     for node in network.nodes.values():

@@ -2,8 +2,6 @@
 __author__ = "Ryan Paulitschke"
 __version__ = "1.0.0"
 
-# TODO header length should be calculated on creation, not taken as an argument.
-
 # Parent Header
 class Header:
     def __init__(self, source_port, destination_port, header_length = 0):

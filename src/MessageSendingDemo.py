@@ -2,15 +2,12 @@
 __author__ = "Rhys Beck"
 __version__ = "1.0.0"
 
-
-from Node import *
-from Connection import Connection
-from SimulationLoop import start_simulation
-from SimulationLoop import SimThread
-import time
-
 import Network
-from routingTableAlgorithm import routingTables
+from Connection import Connection
+from Node import *
+from SimulationLoop import SimThread
+from SimulationLoop import start_simulation
+from src.routingTableAlgorithm import routingTables
 
 
 def get_graph():

@@ -3,16 +3,6 @@ class Connection:
     COAX_LATENCY = 2
     FIBRE_LATENCY = 1
 
-    #TODO remove this.
-    # def __init__(self, node1, node2, type = "Coax", length= 100):
-    #     #Note that node1 and node2 are Node descendent instances, not node ids.
-    #     self.connection_id = Connection.static_id
-    #     Connection.static_id += 1
-    #     self.nodes = [node1, node2]
-    #     self.connectionType = type
-    #     self.connectionLength = length
-    #     self.trafficCount = 0
-
     def __init__(self, type="Coax", length=2):
         # Note that node1 and node2 are Node descendant instances, not node ids.
         self.connection_id = Connection.static_id
@@ -58,7 +48,6 @@ class Connection:
         return False
 
     def connect_interface(self, interface):
-        # TODO: for now, assume all connections are one to one, but may add broadcasting later (so no exceptions yet)
         if len(self.interfaces) < 2:
             self.interfaces.append(interface)
 
@@ -94,7 +83,6 @@ class Connection:
         other.wake_up()
 
     def shut_down(self, sending_interface):
-        # TODO this cheats by sending the frame over in the shut_down method because bit parsing isn't implemented
         other = self.other_interface(sending_interface)
         print "shutting down interface with MAC", other.MAC_address
 

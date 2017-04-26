@@ -163,8 +163,6 @@ def NetOutputProcess(env, NL_int):
             else:
                 #If this packet is already waiting on an ARP reply, don't send another one.
                 print 'NL_int IP', NL_int.IP_address, 'waiting for ARP...'
-            # TODO don't like this. Would maybe be better if I could avoid removing it from the store at all.
-            # TODO That said, this is somewhat more efficient, as one packet waiting on ARP won't plug up the system.
             # Whether it's in the ARP list or not, the datagram is waiting on ARP, now, so it needs to go back in
             # the output queue.
             NL_int.output_NL_queue.put(datagram)
@@ -263,7 +261,6 @@ def LinkInputProcess(env, interface):
                 yield env.timeout(1)
                 for id, other_int in switch.interfaces.iteritems():
                     if id != interface.id:
-                        # TODO where do switches drop packets during congestion?
                         print "LL_int MAC", interface.MAC_address, 'broadcasting frame', frame
                         yield other_int.output_LL_queue.put(copy.deepcopy(frame))
                         # Assume switches buffer output frames, but not input frames, because
@@ -318,8 +315,6 @@ def trace_cb(event):
         value = event.value
         string = '%d event: %s value: %s' % (env.now, event, value)
 
-        # TODO remove this line
-        print string + '\n'
 
         trace = src.Network.trace
         trace.write(string)

@@ -1,4 +1,3 @@
-#TODO I suspect Adam wrote this.  It may be unnecessary.  This could probably be done with the SimThread.
 
 import threading
 from time import sleep

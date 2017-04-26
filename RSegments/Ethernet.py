@@ -32,7 +32,6 @@ class EthernetFrame:
         return self.header.dest_MAC
 
     def get_bit_string(self):
-        # TODO make this really work!!!
         return "101"
 
     def __str__(self):
