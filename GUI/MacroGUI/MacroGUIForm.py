@@ -149,9 +149,9 @@ class Ui_MainWindow(object):
         self.lblConnectionType = QtGui.QLabel(self.dockCPContents)
         self.lblConnectionType.setGeometry(QtCore.QRect(10, 10, 81, 20))
         self.lblConnectionType.setObjectName(_fromUtf8("lblConnectionType"))
-        self.lblConnectionBandwidth = QtGui.QLabel(self.dockCPContents)
-        self.lblConnectionBandwidth.setGeometry(QtCore.QRect(20, 65, 61, 16))
-        self.lblConnectionBandwidth.setObjectName(_fromUtf8("lblConnectionBandwidth"))
+        self.lblConnectionLatency = QtGui.QLabel(self.dockCPContents)
+        self.lblConnectionLatency.setGeometry(QtCore.QRect(20, 65, 61, 16))
+        self.lblConnectionLatency.setObjectName(_fromUtf8("lblConnectionBandwidth"))
         self.cboConnectionType = QtGui.QComboBox(self.dockCPContents)
         self.cboConnectionType.setGeometry(QtCore.QRect(108, 10, 81, 22))
         self.cboConnectionType.setMaxVisibleItems(3)
@@ -162,11 +162,11 @@ class Ui_MainWindow(object):
         self.txtConnectionLength.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtConnectionLength.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.txtConnectionLength.setObjectName(_fromUtf8("txtConnectionLength"))
-        self.txtConnectionBandwidth = QtGui.QPlainTextEdit(self.dockCPContents)
-        self.txtConnectionBandwidth.setGeometry(QtCore.QRect(90, 65, 61, 21))
-        self.txtConnectionBandwidth.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.txtConnectionBandwidth.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.txtConnectionBandwidth.setObjectName(_fromUtf8("txtConnectionBandwidth"))
+        self.txtConnectionLatency = QtGui.QPlainTextEdit(self.dockCPContents)
+        self.txtConnectionLatency.setGeometry(QtCore.QRect(90, 65, 61, 21))
+        self.txtConnectionLatency.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.txtConnectionLatency.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.txtConnectionLatency.setObjectName(_fromUtf8("txtConnectionLatency"))
         self.btnModifyConnection = QtGui.QPushButton(self.dockCPContents)
         self.btnModifyConnection.setGeometry(QtCore.QRect(80, 120, 80, 25))
         self.btnModifyConnection.setObjectName(_fromUtf8("btnModifyConnection"))
@@ -283,7 +283,7 @@ class Ui_MainWindow(object):
         self.dockConnectionProperties.setWindowTitle(_translate("MainWindow", "Connection Properties", None))
         self.lblConnectionLength.setText(_translate("MainWindow", "Length", None))
         self.lblConnectionType.setText(_translate("MainWindow", "Connection Type", None))
-        self.lblConnectionBandwidth.setText(_translate("MainWindow", "Bandwidth", None))
+        self.lblConnectionLatency.setText(_translate("MainWindow", "Latency", None))
         self.btnModifyConnection.setText(_translate("MainWindow", "Modify", None))
         self.btnModifyConnection.setEnabled(False)
         self.btnAddConnection.setText(_translate("MainWindow", "Add", None))
@@ -315,16 +315,16 @@ class Ui_MainWindow(object):
         self.cboConnectionType.addItems(['Coax', 'Fibre', 'Custom'])
         self.cboNodeType.addItems(['Host', 'Router', 'Switch'])
 
-        self.txtConnectionBandwidth.setPlainText(`2`)
+        self.txtConnectionLatency.setPlainText(`2`)
         self.txtConnectionLength.setPlainText(`2`)
 
     def decideBandwidth(self):
         if self.cboConnectionType.currentText() == "Custom":
-            self.lblConnectionBandwidth.show()
-            self.txtConnectionBandwidth.show()
+            self.lblConnectionLatency.show()
+            self.txtConnectionLatency.show()
         else:
-            self.lblConnectionBandwidth.hide()
-            self.txtConnectionBandwidth.hide()
+            self.lblConnectionLatency.hide()
+            self.txtConnectionLatency.hide()
 
     def addNode(self):
         # Create the GUI node
@@ -399,10 +399,14 @@ class Ui_MainWindow(object):
         simNodes = src.Network.network.nodes
 
         #create the connection
-        simConnection = SimulationConnection.Connection(self.cboConnectionType.currentText(),
+        type = self.cboConnectionType.currentText()
+        simConnection = SimulationConnection.Connection(type,
                                        int(self.txtConnectionLength.toPlainText()))
         #connect it to interfaces in each node.
         simConnection.connect_nodes(simNode1, simNode2)
+
+        if type == "Custom":
+            simConnection.customLatency = int(self.txtConnectionLatency.toPlainText())
 
         src.Network.network.add_connection(gnode1.getIDInt(), gnode2.getIDInt(), simConnection)
 
@@ -636,11 +640,11 @@ class Ui_MainWindow(object):
 
             for node in nodes:
                 location = node.getLocation()
-                trace.write('Node:id:%d type:%s XPos:%s YPos:%s\n'%\
+                trace.write('Node: id: %d type: %s XPos: %s YPos: %s\n'%\
                             (node.getIDInt(), node.getType(), location[0], location[1]))
 
             for id, conn in src.Network.network.connections.iteritems():
-                trace.write('Conn:id:%s type:%s node:%d node:%d\n'%\
+                trace.write('Conn: id: %s type: %s node: %d node: %d\n'%\
                             (conn.connection_id, conn.connectionType, id[0], id[1]))
 
             self.network_traced = True

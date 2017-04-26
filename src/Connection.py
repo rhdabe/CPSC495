@@ -22,6 +22,7 @@ class Connection:
         self.connectionLength = length
         self.trafficCount = 0
         self.state = 0
+        self.customLatency = 2
 
         #hokey integration list for micro
         self.nodes = []
@@ -32,6 +33,8 @@ class Connection:
             return Connection.COAX_LATENCY * self.connectionLength
         elif self.connectionType == "Fibre":
             return Connection.FIBRE_LATENCY * self.connectionLength
+        elif self.connectionType == "Custom":
+            return self.customLatency * self.connectionLength
         elif self.connectionType == None:
             return self.connectionLength
 

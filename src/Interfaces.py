@@ -1,9 +1,8 @@
 from NQueue import NQueue
-from RSegments.IP import *
 from RSegments.Ethernet import *
-from Packet import Packet
 import Network
 import SimPyStuff
+import Node
 
 class LLInterface(object):
     # Note: apparently switches do not have MAC addresses for interfaces that connect to Hosts or Routers. Zero import.
@@ -15,10 +14,16 @@ class LLInterface(object):
         self.id = LLInterface.static_ID
         LLInterface.static_ID += 1
         self.node = node
-        self.input_LL_process = Network.env.process(SimPyStuff.LinkInputProcess(Network.env, self))
-        self.input_LL_queue = NQueue()
         self.output_LL_process = Network.env.process(SimPyStuff.LinkOutputProcess(Network.env, self))
-        self.output_LL_queue = NQueue()
+        self.input_LL_process = Network.env.process(SimPyStuff.LinkInputProcess(Network.env, self))
+
+        if(isinstance(self, Node.Router)):
+            self.input_LL_queue = NQueue(1)
+            self.output_LL_queue = NQueue(1)
+        else:
+            self.input_LL_queue = NQueue()
+            self.output_LL_queue = NQueue()
+
         self.MAC_address = LLInterface.static_MAC
         LLInterface.static_MAC += 1
         self.connection = None  # points to current connection object
